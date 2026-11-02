@@ -87,6 +87,12 @@ class Candidate:
     job_title: str = ""
     company: str = ""
     professional_evidence: list[Evidence] = field(default_factory=list)
+    nationality: str = ""
+    follower_count: int | None = None
+    follower_display: str = ""
+    follower_note: str = ""
+    follower_source: str = ""
+    nationality_source: str = ""
 
 
 @dataclass

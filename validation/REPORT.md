@@ -1,10 +1,10 @@
 # Verification report
 
-Recorded on **2 November 2026**, using Windows and Python 3.12.10. UI, documentation, and messages are in English. CSV export was omitted at the user's request.
+Recorded on **2 November 2026**, using Windows and Python 3.12.10. UI, documentation, and messages are in English. CSV export and a sortable list were added at the user's latest request.
 
 ## Automated checks
 
-- **130 tests passed** (`.venv\Scripts\python.exe -m pytest -q`, latest run: 2.08 seconds).
+- **173 tests passed** (`.venv\Scripts\python.exe -m pytest -q`, latest run: 4.42 seconds).
 - No tests contact search engines. Search responses, errors, and public-reference pages are mocked.
 - Coverage includes required names; optional context; all three profile parsers; X/Twitter deduplication; non-profile and spoofed URLs; similar names; fan/news/archive rejection; evidence sources; error classification; bounded retries; explicit DDGS empty results; platform independence; partial failures; no results; English UI startup; validation messages; profile buttons; technical details; and refresh.
 - `.venv\Scripts\python.exe -m pip check`: **No broken requirements found**.
@@ -64,13 +64,24 @@ The full local diagnostic data is in `validation/live-search.json`. It contains 
 | Failure separate from no reliable match | Implemented and tested |
 | Search errors do not crash the whole search | Implemented and tested |
 | No paid API, LLM, or social login | Implemented |
-| CSV export | Omitted at user's request |
+| Sortable list and CSV export | Implemented and tested |
+| Single- and multi-platform search/export | Implemented and tested |
 | Windows launcher | Preparation mode verified; browser opening not exercised |
 | macOS launcher | Bash syntax verified; native launch not tested |
-| Automated tests | 130 passed |
+| Automated tests | 173 passed |
 | English README and project structure | Included |
 
-The project is runnable locally. Live search was exercised, but reliable account discovery across every platform and graphical end-to-end operation are not claimed.
+The project is runnable locally. Historical live search was exercised, but reliable account discovery across every platform and graphical end-to-end operation are not claimed.
+
+## Platform selection, ranked list, and CSV export
+
+Added one-/multi-platform selection before search, a default sortable list, list/export platform filtering, and CSV download. The Profiles view retains individual links and diagnostics. Removed sidebar/metrics/evidence panels were not restored.
+
+List/CSV fields include profession, company, explicit nationality, numeric followers, original count text, match status, and original reference links. CSV adds canonical URLs, field-source links, search time/inputs, precision notes, and search completeness/error counts. Query inputs remain separate from observed facts.
+
+Follower parsing distinguishes followers from connections/following/likes/posts, preserves zero versus unknown, and handles grouped numbers, K/M/B, rounded values, and lower bounds. Nationality is not inferred from location. At most two additional exact-profile metric queries per selected platform can fill missing counts; other accounts' results cannot enrich a candidate.
+
+Verification covers mocked UI search/filter/sort/download, single-platform refresh, empty selections, numeric ranking, status rows, CSV BOM/quoting/Unicode, original references, and formula escaping. No new dependencies are required. Live follower counts and nationality coverage were not independently verified in this update; the network checks elsewhere in this report predate these fields.
 
 ## Frontend cleanup
 

@@ -5,7 +5,8 @@ from finder.linkedin_profile import (
     build_detail_queries, populate_career_details, relaxed_profession, title_match_level,
 )
 from finder.models import MatchStatus, Person, Platform, PlatformResult, Query, QueryRun, utc_now
-from finder.profile_parser import extract_candidates
+from finder.profile_parser import extract_candidates, normalize_profile_url
+from finder.public_profile import build_metrics_query, populate_public_details
 from finder.query_builder import build_queries, search_term
 from finder.search_engine import DDGSSearchEngine, SearchProvider, classify_error
 
@@ -53,6 +54,20 @@ class FinderService:
             except Exception as exc:
                 result.verification_notes.append(f"Public reference check unavailable: {type(exc).__name__}: {str(exc)[:180]}")
         result.candidates = rank_candidates(candidates, person)
+        for candidate in result.candidates:
+            populate_public_details(candidate, person)
+        # A small, per-platform budget fills follower fields omitted by discovery.
+        # Only results for the exact profile may enrich that candidate.
+        for candidate in [item for item in result.candidates if item.follower_count is None][:2]:
+            run = self._run_query(build_metrics_query(person, candidate))
+            result.runs.append(run)
+            for hit in run.hits:
+                parsed = normalize_profile_url(hit.url)
+                if parsed and parsed[1] == candidate.url and hit not in candidate.hits:
+                    candidate.hits.append(hit)
+            populate_public_details(candidate, person)
+        # New index text may reveal career context or a fan/parody account.
+        result.candidates = rank_candidates(result.candidates, person)
         if result.candidates:
             result.status = result.candidates[0].status
         elif result.errors:

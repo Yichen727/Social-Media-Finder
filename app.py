@@ -3,6 +3,7 @@
 import streamlit as st
 
 from finder.models import MatchStatus, Person, Platform, PlatformResult
+from finder.export import SORT_OPTIONS, VISIBLE_COLUMNS, export_csv, result_rows, sort_rows
 from finder.public_evidence import PublicEvidenceVerifier
 from finder.query_builder import build_queries, manual_search_url
 from finder.service import FinderService
@@ -82,6 +83,9 @@ with st.form("person_search"):
     profession = columns[0].text_input("Profession / Occupation", placeholder="e.g. Actress", max_chars=160)
     organization = columns[1].text_input("Organization / Affiliation", placeholder="e.g. BBC", max_chars=160)
     country = columns[2].text_input("Nationality / Country", placeholder="e.g. British", max_chars=160)
+    selected_platform_names = st.multiselect("Platforms", [platform.value for platform in Platform],
+                                           default=[platform.value for platform in Platform],
+                                           key="search_platforms")
     st.caption("Only the name is required. Optional details help distinguish people with similar names.")
     submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
 
@@ -93,25 +97,33 @@ person_to_search = None
 if submitted:
     try:
         person_to_search = Person(full_name, profession, organization, country)
+        if not selected_platform_names:
+            raise ValueError("Select at least one platform.")
     except ValueError as exc:
+        person_to_search = None
         st.error(str(exc))
 elif refresh:
     person_to_search = st.session_state.searched_person
 
 if person_to_search:
+    platforms_to_search = ([Platform(value) for value in selected_platform_names] if submitted
+                           else list(st.session_state.get("searched_platforms", Platform)))
     st.session_state.searched_person = person_to_search
-    st.session_state.results = {platform: PlatformResult(platform) for platform in Platform}
+    st.session_state.searched_platforms = platforms_to_search
+    st.session_state.results = {platform: PlatformResult(platform) for platform in platforms_to_search}
+    if submitted or "list_platforms" not in st.session_state:
+        st.session_state.list_platforms = [platform.value for platform in platforms_to_search]
     progress = st.progress(0, text="Preparing public web searches…")
     live_status = st.empty()
     service = FinderService(verifier=PublicEvidenceVerifier())
     with st.spinner("Searching public indexes and checking available evidence…"):
-        for index, platform in enumerate(Platform):
+        for index, platform in enumerate(platforms_to_search):
             live_status.info(" · ".join(
                 f"{p.value}: {'Searching…' if p == platform else st.session_state.results[p].status.value}"
-                for p in Platform
+                for p in platforms_to_search
             ))
             st.session_state.results[platform] = service.search_platform(person_to_search, platform)
-            progress.progress((index + 1) / len(Platform), text=f"Completed {platform.value}")
+            progress.progress((index + 1) / len(platforms_to_search), text=f"Completed {platform.value}")
     live_status.empty()
     progress.empty()
     # Display the refresh control consistently on the completed page.
@@ -128,12 +140,43 @@ if "searched_person" in st.session_state:
     dates = [result.searched_at for result in results.values() if result.searched_at]
     if dates:
         st.caption(f"Last search: {max(dates)} · UTC")
-    for column, platform in zip(st.columns(3), Platform):
-        with column:
-            render_result(results[platform], person)
+    if "list_platforms" not in st.session_state:
+        st.session_state.list_platforms = [platform.value for platform in results]
+    controls = st.columns([2, 2, 1])
+    visible_names = controls[0].multiselect(
+        "Platforms in list", [platform.value for platform in results],
+        key="list_platforms",
+    )
+    sort_by = controls[1].selectbox("Sort by", SORT_OPTIONS)
+    view = controls[2].radio("View", ["List", "Profiles"], horizontal=True)
+    visible_platforms = [Platform(value) for value in visible_names]
+    rows = sort_rows(result_rows(person, results.values(), visible_platforms), sort_by)
+    if not visible_platforms:
+        st.info("Select a platform to view or export results.")
+    elif view == "List":
+        for platform in visible_platforms:
+            if results[platform].partial:
+                st.warning(f"{platform.value}: some queries failed. Results may be incomplete.")
+        st.dataframe(
+            rows, hide_index=True, use_container_width=True, column_order=VISIBLE_COLUMNS,
+            column_config={
+                "Rank": st.column_config.NumberColumn(format="%d"),
+                "Followers": st.column_config.NumberColumn(format="%d",
+                    help="Numeric indexed count; K/M values may be rounded and + values are lower bounds."),
+                "Reference URL": st.column_config.LinkColumn("Reference URL"),
+            },
+        )
+        st.caption("Missing values are blank. Follower counts come from public indexes and may be rounded or outdated; location is not nationality.")
+    else:
+        for column, platform in zip(st.columns(len(visible_platforms)), visible_platforms):
+            with column:
+                render_result(results[platform], person)
+    st.download_button("Download CSV", data=export_csv(rows), file_name="social-media-results.csv",
+                       mime="text/csv", disabled=not bool(visible_platforms))
 else:
     st.divider()
-    for column, platform in zip(st.columns(3), Platform):
+    initial_platforms = [Platform(value) for value in selected_platform_names]
+    for column, platform in zip(st.columns(max(1, len(initial_platforms))), initial_platforms):
         with column:
             st.subheader(platform.value)
             st.caption("Not Searched")

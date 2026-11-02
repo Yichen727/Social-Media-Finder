@@ -33,7 +33,7 @@ def test_empty_results_and_refresh_are_rendered_without_network_calls():
         app.button[0].click().run()
         assert not app.exception
         assert search.call_count == 3
-        assert sum("no candidate" in item.value for item in app.markdown) == 3
+        assert list(app.dataframe[0].value["Match Status"]) == ["No Reliable Match"] * 3
         refresh = next(button for button in app.button if button.label == "Refresh Search")
         refresh.click().run()
         assert not app.exception and search.call_count == 6
@@ -46,8 +46,8 @@ def test_failed_search_is_visibly_distinct_from_no_match():
                side_effect=lambda person, platform: PlatformResult(platform, MatchStatus.FAILED if platform == Platform.X else MatchStatus.NONE)):
         app.button[0].click().run()
     assert not app.exception
-    assert any(error.value == "Search Failed" for error in app.error)
-    assert sum(info.value == "No Reliable Match" for info in app.info) == 2
+    assert list(app.dataframe[0].value["Match Status"]).count("Search Failed") == 1
+    assert list(app.dataframe[0].value["Match Status"]).count("No Reliable Match") == 2
 
 
 def test_candidate_links_and_failure_details_are_available():
@@ -69,6 +69,7 @@ def test_candidate_links_and_failure_details_are_available():
         ])
     with patch("finder.service.FinderService.search_platform", side_effect=result):
         app.button[0].click().run()
+    app.radio[0].set_value("Profiles").run()
     assert not app.exception
     assert any(element.value == "https://x.com/alexmorgan" for element in app.text)
     assert any("TimeoutError: timeout" in element.value for element in app.text)
@@ -93,7 +94,75 @@ def test_linkedin_role_and_company_are_visible_without_restoring_removed_panels(
     with patch("finder.service.FinderService.search_platform", side_effect=result):
         app.button[0].click().run()
     assert not app.exception
-    assert any(caption.value == "Senior Creative Producer" for caption in app.caption)
-    assert any(caption.value == "Example Studios" for caption in app.caption)
+    assert "Senior Creative Producer" in list(app.dataframe[0].value["Profession"])
+    assert "Example Studios" in list(app.dataframe[0].value["Company"])
     assert not app.metric
     assert not any(expander.label == "Why this profile?" for expander in app.expander)
+
+
+def test_platform_selection_can_search_one_platform_and_refresh_only_that_platform():
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("Alex Morgan")
+    app.multiselect[0].set_value(["LinkedIn"])
+    with patch("finder.service.FinderService.search_platform",
+               side_effect=lambda person, platform: PlatformResult(platform, MatchStatus.NONE)) as search:
+        app.button[0].click().run()
+        assert not app.exception
+        assert search.call_count == 1
+        assert search.call_args.args[1] == Platform.LINKEDIN
+        assert list(app.dataframe[0].value["Platform"]) == ["LinkedIn"]
+        next(button for button in app.button if button.label == "Refresh Search").click().run()
+        assert search.call_count == 2
+        assert all(call.args[1] == Platform.LINKEDIN for call in search.call_args_list)
+
+
+def test_no_platform_selection_blocks_search():
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("Alex Morgan")
+    app.multiselect[0].set_value([])
+    with patch("finder.service.FinderService.search_platform") as search:
+        app.button[0].click().run()
+    assert not app.exception
+    search.assert_not_called()
+    assert app.error[0].value == "Select at least one platform."
+    assert not app.dataframe
+
+
+def test_list_filter_and_numeric_sort_are_shared_by_csv_without_researching():
+    from finder.models import Candidate
+    from finder.export import export_csv
+
+    def result(person, platform):
+        return PlatformResult(platform, MatchStatus.POSSIBLE, candidates=[
+            Candidate(platform, f"https://example.com/{platform.name}", "alex", "Alex Morgan",
+                      job_title="Producer", company="Example Studios", nationality="British",
+                      follower_count=1000 if platform == Platform.LINKEDIN else 20000)
+        ])
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("Alex Morgan")
+    with patch("finder.service.FinderService.search_platform", side_effect=result) as search:
+        app.button[0].click().run()
+        app.multiselect[1].set_value(["LinkedIn", "Instagram"])
+        with patch("finder.export.export_csv", wraps=export_csv) as download:
+            app.run()
+            rows = download.call_args.args[0]
+            assert [row["Platform"] for row in rows] == ["Instagram", "LinkedIn"]
+            assert [row["Followers"] for row in rows] == [20000, 1000]
+            assert list(app.dataframe[0].value["Followers"]) == [20000, 1000]
+            assert len(app.get("download_button")) == 1
+            app.selectbox[0].set_value("Followers (lowest first)").run()
+            assert [row["Followers"] for row in download.call_args.args[0]] == [1000, 20000]
+        assert search.call_count == 3
+    assert not app.exception
+
+
+def test_empty_list_filter_disables_export_and_does_not_crash():
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("Alex Morgan")
+    with patch("finder.service.FinderService.search_platform",
+               side_effect=lambda person, platform: PlatformResult(platform, MatchStatus.NONE)):
+        app.button[0].click().run()
+    app.multiselect[1].set_value([]).run()
+    assert not app.exception
+    assert app.get("download_button")[0].proto.disabled
+    assert not app.dataframe

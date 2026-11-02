@@ -1,8 +1,8 @@
 # Social Media Finder
 
-A local, English-language dashboard for researching a person's public **LinkedIn, Instagram, and X / Twitter** accounts. Enter a name, optionally add context, and review candidate profiles with clickable links, match status, and confidence.
+A local, English-language dashboard for researching a person's public **LinkedIn, Instagram, and X / Twitter** accounts. Enter a name, select one or more platforms, and review a sortable list with profession, company, nationality, follower counts, and reference links. Download the filtered list as CSV.
 
-The application uses free web search. It requires **no API key, paid service, LLM, or social-platform login**. CSV export is intentionally omitted.
+The application uses free web search. It requires **no API key, paid service, LLM, or social-platform login**.
 
 ## 1. Requirements
 
@@ -43,13 +43,26 @@ Both launchers support paths containing spaces. If you move the folder between c
 
 1. Enter **Full Name**. This is the only required field.
 2. Optionally enter **Profession / Occupation**, **Organization / Affiliation**, and **Nationality / Country**. Leave unknown details blank.
-3. Select **Search**. A spinner and platform status show progress.
-4. Review the LinkedIn, Instagram, and X / Twitter sections. Up to five candidates are shown per platform.
-5. Review each candidate's name, handle, match status, and confidence. LinkedIn candidates also show an indexed job title and company when available. Select **Open profile** to visit it.
-6. Expand **Search queries & manual search** to inspect every query or open it in your browser.
-7. Select **Refresh Search** to rerun searches for the person currently shown. To change the person or context, edit the form and select **Search**.
+3. Select one, two, or all three **Platforms**, then select **Search**. Only selected platforms are queried.
+4. Review the default **List** view. Up to five candidates are shown per searched platform, initially sorted by numeric follower count, highest first.
+5. Use **Platforms in list** to include one or more searched platforms in the table and export. Choose **Sort by** for follower count, name, company, profession, or nationality. These controls do not repeat searches.
+6. Select **Download CSV** to save the filtered list in the selected sort order. The UTF-8 CSV opens in Excel and other spreadsheet tools.
+7. Open a clickable **Reference URL** to inspect the original source. Switch **View** to **Profiles** for individual profile buttons, search queries, manual search links, and technical details.
+8. Select **Refresh Search** to rerun the same person and searched platforms. To change the person, context, or search scope, edit the form and select **Search**.
 
 Results persist during normal Streamlit reruns in your browser session. There is no persistent search cache or automatic background refresh. Closing the session or restarting the app clears its results. Stopping the app: press **Ctrl+C** in its terminal.
+
+### Results list and CSV
+
+The list contains **Rank, Platform, Profile Name, Profession, Company, Nationality, Followers, Follower Count Text, Match Status, Confidence, and Reference URL**. CSV additionally includes username, canonical profile URL, field-source URLs, search time, query inputs, follower precision notes, and search completeness/error information.
+
+- Followers are numeric for ranking: `2K` becomes `2000`, and `1.2M` becomes `1200000`. Original text is kept separately; rounded, approximate, and lower-bound counts are labeled in CSV.
+- Counts reflect public search indexes, not guaranteed current measurements. Connections, following, likes, and posts are never substituted for followers. Unknown counts stay blank and sort after known values, including zero.
+- Nationality is filled only from explicit Nationality/Citizenship text. Location and the search country field are not treated as nationality.
+- Profession and company come from attributable profile text. Missing information stays blank; search inputs and another platform's uncertain identity are not copied into profile facts.
+- Platforms with Search Failed or No Reliable Match retain status rows with blank profile fields.
+- CSV follows the **Sort by** dropdown. Clicking a table header only changes the temporary table display order.
+- CSV uses a UTF-8 BOM for Excel compatibility and escapes spreadsheet formula characters in untrusted text.
 
 ### Understanding statuses
 
@@ -68,7 +81,7 @@ If some queries fail but others yield candidates, those candidates remain visibl
 ## 5. How it works
 
 1. **Search adapter:** `finder/search_engine.py` calls DDGS with `backend="auto"`, eight results per query, and an eight-second provider timeout. It attempts a query at most twice with a short exponential backoff. It distinguishes timeout, rate-limit, HTTP, connection, TLS, access-restriction, and generic provider errors. Access restrictions and TLS errors are not retried. The exact DDGS `No results found.` signal is treated as an empty search; wrapped HTTP/timeout errors remain failures. DDGS can contact multiple backends internally, so its timeout is not an overall search deadline.
-2. **Query builder:** LinkedIn searches the name broadly, then the profession and organization independently when supplied, followed by an external reference search. Country provides the contextual query when no profession or organization is supplied. If an exact role is missing, one additional query can omit a seniority marker such as “Senior”; up to two profile-scoped index lookups can fill missing career details. LinkedIn uses at most seven logical queries per search. Instagram and X keep their three-query strategy. X searches `x.com` broadly and `twitter.com` in its second query. All optional conditions are never forced into every query.
+2. **Query builder:** LinkedIn searches the name broadly, then profession and organization independently, followed by an external reference search. Country supplies context when no profession or organization is supplied. One core-role fallback and up to two profile-scoped career lookups can fill missing details. Instagram and X retain three discovery queries, including legacy Twitter support. Up to two additional exact-profile metric queries per selected platform can fill missing follower data. Maximum logical query budgets are nine for LinkedIn and five each for Instagram/X. Optional conditions are never forced into every query.
 3. **Profile parser:** accepts personal LinkedIn `/in/` pages and single-handle Instagram/X pages. Rejects posts, reels, stories, searches, reserved routes, spoofed domains, and non-web URLs. Removes tracking parameters and combines X/Twitter aliases. Profile links originate in search results; handles are never guessed.
 4. **Identity matching:** full-name tokens and handles establish candidate identity clues. A profile-attributed LinkedIn job title and company receive more ranking weight than a matching username. Role matching distinguishes an exact profession from a compatible core role with missing seniority; “Creative Producer” never becomes “Senior Creative Producer” unless that text is returned by the index. Similar but different names and fan/parody wording are rejected. Candidates are sorted using an internal rule score; that score is not shown as an authenticity percentage. Professional details improve identity ranking but do not establish official account ownership.
 5. **Public references:** at most two eligible pages per platform are checked for direct profile links with local name attribution. The small source policy currently covers BBC, Reuters, AP, Olympics, UN, EU, and UK government domains. BBC's two domains count as one source. A reference must match the person's name in its indexed title and fetched page title/heading. Generic social footers do not count. Fetches honor `robots.txt`; redirects, restricted pages, non-HTML responses, and oversized pages are skipped. Social-platform pages are never fetched. Two independent source families are required for “Likely Official.”
@@ -127,7 +140,7 @@ python3 bootstrap.py --prepare-only
 
 Tests use mocks and Streamlit's AppTest; they do not contact search engines. They cover validation, query generation, canonical URLs, spoofed domains, posts, deduplication, incorrect names, fan accounts, direct-reference checks, retries, partial failures, empty results, and UI search/refresh behavior.
 
-Additional LinkedIn regression tests cover headline/job/company parsing, profession-based ranking, missing seniority, namesake contamination, bounded profile lookups, lookup failures, and compact career fields in the results.
+Additional tests cover LinkedIn headline/job/company parsing, profession-based ranking, missing seniority, namesake contamination, and lookup failures. List/export tests cover platform selection, refresh scope, numeric ranking, unknown counts, follower-versus-connection parsing, explicit nationality, original references, CSV quoting/formula escaping, table controls, and download availability.
 
 To create a clean distribution, run `.venv\Scripts\python.exe scripts\package_project.py` on Windows, or `.venv/bin/python scripts/package_project.py` on macOS. This creates `dist/Social-Media-Finder.zip` and preserves executable permissions for `run.command`. It excludes the local environment, caches, and raw live-search report.
 
@@ -165,6 +178,8 @@ Social Media Finder Tool/
     profile_parser.py            Strict profile URLs and deduplication
     identity_matcher.py          Evidence rules and candidate ranking
     linkedin_profile.py          Indexed LinkedIn role/company parsing and lookups
+    public_profile.py            Indexed follower/nationality parsing and metric queries
+    export.py                    List rows, ranking, and CSV serialization
     public_evidence.py           Bounded public reference checks
     service.py                   Independent platform orchestration
   scripts/
@@ -176,6 +191,8 @@ Social Media Finder Tool/
     test_profile_parser.py
     test_identity_matcher.py
     test_linkedin_profile.py
+    test_public_profile.py
+    test_export.py
     test_search_engine.py
     test_service.py
     test_public_evidence.py
