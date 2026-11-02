@@ -4,7 +4,7 @@ Recorded on **2 November 2026**, using Windows and Python 3.12.10. UI, documenta
 
 ## Automated checks
 
-- **102 tests passed** (`.venv\Scripts\python.exe -m pytest -q`, latest run: 1.95 seconds).
+- **130 tests passed** (`.venv\Scripts\python.exe -m pytest -q`, latest run: 2.08 seconds).
 - No tests contact search engines. Search responses, errors, and public-reference pages are mocked.
 - Coverage includes required names; optional context; all three profile parsers; X/Twitter deduplication; non-profile and spoofed URLs; similar names; fan/news/archive rejection; evidence sources; error classification; bounded retries; explicit DDGS empty results; platform independence; partial failures; no results; English UI startup; validation messages; profile buttons; technical details; and refresh.
 - `.venv\Scripts\python.exe -m pip check`: **No broken requirements found**.
@@ -67,7 +67,7 @@ The full local diagnostic data is in `validation/live-search.json`. It contains 
 | CSV export | Omitted at user's request |
 | Windows launcher | Preparation mode verified; browser opening not exercised |
 | macOS launcher | Bash syntax verified; native launch not tested |
-| Automated tests | 102 passed |
+| Automated tests | 130 passed |
 | English README and project structure | Included |
 
 The project is runnable locally. Live search was exercised, but reliable account discovery across every platform and graphical end-to-end operation are not claimed.
@@ -75,3 +75,19 @@ The project is runnable locally. Live search was exercised, but reliable account
 ## Frontend cleanup
 
 Removed the explanatory sidebar, refresh instruction caption, three summary metrics, and candidate evidence expanders at the user's request. The header now has a single description. Search, refresh, profile links, match statuses, manual search, and error details remain available. Evidence-based matching is unchanged in the backend. The existing automated suite passes after the cleanup.
+
+## LinkedIn career-context improvement
+
+The matcher now extracts indexed headlines, job titles, and companies; searches profession and company independently; and gives a matching professional role more weight than an exact-name handle. LinkedIn permits one core-role fallback and at most two profile-scoped lookups. Query history includes these additional requests. The UI shows the role and company as compact text, without restoring the sidebar, metrics, or candidate evidence panels.
+
+Added regression coverage for exact roles, omitted seniority, unrelated namesakes, concatenated provider results, activity/hiring/historical text, extraction provenance, bounded enrichment, enrichment timeouts, and visible career fields.
+
+A real DDGS check for **Ross Ferguson**, profession **Senior Creative Producer**, with no organization supplied completed five logical queries with zero query errors. The first candidate was:
+
+- Profile: `https://www.linkedin.com/in/ross-ferguson-44750699/`
+- Indexed headline: **Senior Creative Producer at Atomized Studios / Freuds**
+- Extracted job title: **Senior Creative Producer**
+- Extracted company: **Atomized Studios**
+- Ownership status: **Possible Match**, because professional context does not independently establish officialness.
+
+The final parser was also checked against the captured real search responses after adding guards for concatenated namesake snippets. It still ranked this exact profile first and extracted the complete headline, job title, and company. The raw response is saved in the temporary validation copy as `validation/linkedin-search.json`; it is excluded from the distributable ZIP. Live LinkedIn HTML extraction was not performed. The app relies on public search-index metadata, which may be incomplete or outdated.

@@ -44,12 +44,17 @@ def render_result(result: PlatformResult, person: Person):
             if index:
                 st.divider()
             st.text(candidate.profile_name or "Profile name unavailable")
+            if candidate.job_title:
+                st.caption(candidate.job_title)
+            if candidate.company:
+                st.caption(candidate.company)
             st.caption(f"@{candidate.handle} · {candidate.status.value} · Confidence: {candidate.confidence}")
             st.text(candidate.url)
             st.link_button("Open profile", candidate.url, use_container_width=True)
         with st.expander("Search queries & manual search"):
             runs = {run.query.text: run for run in result.runs}
-            for query in build_queries(person, result.platform):
+            queries = [run.query for run in result.runs] or build_queries(person, result.platform)
+            for query in queries:
                 st.caption(query.stage)
                 st.code(query.text, language=None, wrap_lines=True)
                 run = runs.get(query.text)

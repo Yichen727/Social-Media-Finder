@@ -24,11 +24,17 @@ def test_overlong_fields_are_rejected():
 @pytest.mark.parametrize("platform", list(Platform))
 def test_queries_stay_broad_before_adding_context(platform):
     queries = build_queries(Person("Alex Morgan", "Scientist", "Example Lab", "British"), platform)
-    assert len(queries) == 3
+    assert len(queries) == (4 if platform == Platform.LINKEDIN else 3)
     assert '"Alex Morgan"' in queries[0].text
     assert "Example Lab" not in queries[0].text
-    assert "Example Lab" in queries[1].text
-    assert "Scientist" not in queries[1].text
+    if platform == Platform.LINKEDIN:
+        assert "Scientist" in queries[1].text
+        assert "Example Lab" not in queries[1].text
+        assert "Example Lab" in queries[2].text
+        assert "Scientist" not in queries[2].text
+    else:
+        assert "Example Lab" in queries[1].text
+        assert "Scientist" not in queries[1].text
     assert "British" not in queries[1].text
     assert queries[-1].stage == "Public reference search"
 

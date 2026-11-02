@@ -45,7 +45,7 @@ Both launchers support paths containing spaces. If you move the folder between c
 2. Optionally enter **Profession / Occupation**, **Organization / Affiliation**, and **Nationality / Country**. Leave unknown details blank.
 3. Select **Search**. A spinner and platform status show progress.
 4. Review the LinkedIn, Instagram, and X / Twitter sections. Up to five candidates are shown per platform.
-5. Review each candidate's name, handle, match status, and confidence. Select **Open profile** to visit it.
+5. Review each candidate's name, handle, match status, and confidence. LinkedIn candidates also show an indexed job title and company when available. Select **Open profile** to visit it.
 6. Expand **Search queries & manual search** to inspect every query or open it in your browser.
 7. Select **Refresh Search** to rerun searches for the person currently shown. To change the person or context, edit the form and select **Search**.
 
@@ -68,12 +68,20 @@ If some queries fail but others yield candidates, those candidates remain visibl
 ## 5. How it works
 
 1. **Search adapter:** `finder/search_engine.py` calls DDGS with `backend="auto"`, eight results per query, and an eight-second provider timeout. It attempts a query at most twice with a short exponential backoff. It distinguishes timeout, rate-limit, HTTP, connection, TLS, access-restriction, and generic provider errors. Access restrictions and TLS errors are not retried. The exact DDGS `No results found.` signal is treated as an empty search; wrapped HTTP/timeout errors remain failures. DDGS can contact multiple backends internally, so its timeout is not an overall search deadline.
-2. **Query builder:** each platform gets three queries: broad name search, one contextual search, and an external reference search. The organization is preferred as contextual information, then profession, then country. Other supplied fields still help ranking. X searches `x.com` broadly and `twitter.com` in its second query, optionally adding context; other platforms get an “official” discovery query when context is empty. All optional conditions are never forced into every query.
+2. **Query builder:** LinkedIn searches the name broadly, then the profession and organization independently when supplied, followed by an external reference search. Country provides the contextual query when no profession or organization is supplied. If an exact role is missing, one additional query can omit a seniority marker such as “Senior”; up to two profile-scoped index lookups can fill missing career details. LinkedIn uses at most seven logical queries per search. Instagram and X keep their three-query strategy. X searches `x.com` broadly and `twitter.com` in its second query. All optional conditions are never forced into every query.
 3. **Profile parser:** accepts personal LinkedIn `/in/` pages and single-handle Instagram/X pages. Rejects posts, reels, stories, searches, reserved routes, spoofed domains, and non-web URLs. Removes tracking parameters and combines X/Twitter aliases. Profile links originate in search results; handles are never guessed.
-4. **Identity matching:** full-name tokens, exact normalized handles, and supplied context provide weak evidence. Similar but different names and fan/parody wording are rejected. Candidates are sorted using an internal rule score; that score is not shown as an authenticity percentage.
+4. **Identity matching:** full-name tokens and handles establish candidate identity clues. A profile-attributed LinkedIn job title and company receive more ranking weight than a matching username. Role matching distinguishes an exact profession from a compatible core role with missing seniority; “Creative Producer” never becomes “Senior Creative Producer” unless that text is returned by the index. Similar but different names and fan/parody wording are rejected. Candidates are sorted using an internal rule score; that score is not shown as an authenticity percentage. Professional details improve identity ranking but do not establish official account ownership.
 5. **Public references:** at most two eligible pages per platform are checked for direct profile links with local name attribution. The small source policy currently covers BBC, Reuters, AP, Olympics, UN, EU, and UK government domains. BBC's two domains count as one source. A reference must match the person's name in its indexed title and fetched page title/heading. Generic social footers do not count. Fetches honor `robots.txt`; redirects, restricted pages, non-HTML responses, and oversized pages are skipped. Social-platform pages are never fetched. Two independent source families are required for “Likely Official.”
 
 The search provider is behind a small `SearchProvider` contract, so another provider can replace DDGS without rewriting the UI or matching rules.
+
+### LinkedIn role and company extraction
+
+`finder/linkedin_profile.py` parses LinkedIn result titles and the leading public profile introduction. For a headline such as “Senior Creative Producer at Example Studios / Agency Group”, it preserves the headline and extracts “Senior Creative Producer” as the job title and “Example Studios” as the company. A title formatted as “Name - Company | LinkedIn” can provide the company, while an explicit indexed Experience label can provide an affiliation. Each extracted field retains its source URL internally.
+
+Activity posts, recruitment text, past-role wording, locations, truncated fields, and combined namesake results are excluded from role extraction. Indexed fields can still be incomplete or outdated; an Experience affiliation is not a guarantee of current employment. The application does not fetch LinkedIn HTML, access a logged-in session, or copy input values into missing metadata.
+
+For the reported example, enter **Ross Ferguson** and **Senior Creative Producer**, leaving Organization blank. A real-network check on 2 November 2026 ranked `ross-ferguson-44750699` first and extracted **Senior Creative Producer** and **Atomized Studios** from the returned index text. Future search coverage can vary.
 
 ## 6. Limits and privacy
 
@@ -119,6 +127,8 @@ python3 bootstrap.py --prepare-only
 
 Tests use mocks and Streamlit's AppTest; they do not contact search engines. They cover validation, query generation, canonical URLs, spoofed domains, posts, deduplication, incorrect names, fan accounts, direct-reference checks, retries, partial failures, empty results, and UI search/refresh behavior.
 
+Additional LinkedIn regression tests cover headline/job/company parsing, profession-based ranking, missing seniority, namesake contamination, bounded profile lookups, lookup failures, and compact career fields in the results.
+
 To create a clean distribution, run `.venv\Scripts\python.exe scripts\package_project.py` on Windows, or `.venv/bin/python scripts/package_project.py` on macOS. This creates `dist/Social-Media-Finder.zip` and preserves executable permissions for `run.command`. It excludes the local environment, caches, and raw live-search report.
 
 Run the optional real-network checks separately:
@@ -130,6 +140,8 @@ Run the optional real-network checks separately:
 ```
 
 On macOS, use `.venv/bin/python` in place of the Windows interpreter path. The script checks Emma Watson, Elon Musk, and Christopher Nolan across all three platforms by default. It writes `validation/live-search.json`, containing actual queries, candidates, evidence, and errors. It uses five-second provider timeouts with no adapter retries so diagnostics remain bounded; normal app settings are more tolerant. The JSON report is a development artifact, not a CSV export feature or application fixture. Never copy its candidate links into application logic.
+
+For the LinkedIn profession example, run `.venv\Scripts\python.exe -X utf8 scripts\check_linkedin.py` on Windows or `.venv/bin/python scripts/check_linkedin.py` on macOS. This checks Ross Ferguson with profession “Senior Creative Producer” and writes the actual response to `validation/linkedin-search.json`. That diagnostic file is excluded from the distribution archive and is never used as application data.
 
 See [validation/REPORT.md](validation/REPORT.md) for the recorded verification results and limits.
 
@@ -152,15 +164,18 @@ Social Media Finder Tool/
     query_builder.py             Staged queries and manual fallback links
     profile_parser.py            Strict profile URLs and deduplication
     identity_matcher.py          Evidence rules and candidate ranking
+    linkedin_profile.py          Indexed LinkedIn role/company parsing and lookups
     public_evidence.py           Bounded public reference checks
     service.py                   Independent platform orchestration
   scripts/
     live_search.py               Opt-in network validation
     package_project.py           Create the distributable ZIP
+    check_linkedin.py             Opt-in profession-context validation
   tests/
     test_query_builder.py
     test_profile_parser.py
     test_identity_matcher.py
+    test_linkedin_profile.py
     test_search_engine.py
     test_service.py
     test_public_evidence.py

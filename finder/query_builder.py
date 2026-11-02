@@ -19,15 +19,27 @@ def build_queries(person: Person, platform: Platform) -> list[Query]:
         Platform.X: "site:x.com/",
     }[platform]
     queries = [Query("Broad search", f"{scope} {name}")]
-    context = search_term(person.organization or person.profession or person.country)
-    # Only one optional condition at a time: broad discovery is never over-constrained.
-    if context:
-        context_scope = "site:twitter.com/" if platform == Platform.X else scope
-        queries.append(Query("Contextual search", f"{context_scope} {name} {context}"))
-    elif platform == Platform.X:
-        queries.append(Query("Legacy domain search", f"site:twitter.com/ {name}"))
+    if platform == Platform.LINKEDIN:
+        # Search job title and company independently; neither may hide the other.
+        contexts = list(dict.fromkeys(
+            search_term(value) for value in (person.profession, person.organization) if value
+        ))
+        if not contexts and person.country:
+            contexts = [search_term(person.country)]
+        for context in contexts:
+            queries.append(Query("Contextual search", f"{scope} {name} {context}"))
+        if not contexts:
+            queries.append(Query("Contextual search", f"{scope} {name} official"))
     else:
-        queries.append(Query("Contextual search", f"{scope} {name} official"))
+        context = search_term(person.organization or person.profession or person.country)
+        # Keep the existing lightweight discovery strategy for the other platforms.
+        if context:
+            context_scope = "site:twitter.com/" if platform == Platform.X else scope
+            queries.append(Query("Contextual search", f"{context_scope} {name} {context}"))
+        elif platform == Platform.X:
+            queries.append(Query("Legacy domain search", f"site:twitter.com/ {name}"))
+        else:
+            queries.append(Query("Contextual search", f"{scope} {name} official"))
     reference = {
         Platform.LINKEDIN: '"linkedin.com/in/"',
         Platform.INSTAGRAM: '"instagram.com/"',

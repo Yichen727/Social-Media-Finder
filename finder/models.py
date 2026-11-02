@@ -83,6 +83,10 @@ class Candidate:
     score: int = 0
     status: MatchStatus = MatchStatus.POSSIBLE
     confidence: str = "Low"
+    headline: str = ""
+    job_title: str = ""
+    company: str = ""
+    professional_evidence: list[Evidence] = field(default_factory=list)
 
 
 @dataclass

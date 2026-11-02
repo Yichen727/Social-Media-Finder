@@ -27,6 +27,8 @@ def has_fan_signal(text: str) -> bool:
 
 
 def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
+    from finder.linkedin_profile import populate_career_details, title_match_level
+    populate_career_details(candidate, person)
     candidate.evidence = [e for e in candidate.evidence if e.strength == "strong"]
     candidate.cautions = []
     score = 0
@@ -53,6 +55,26 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
             candidate.evidence.append(Evidence(f"{label} appears in the indexed text: {value}.", source))
         elif value:
             candidate.cautions.append(f"{label} was not corroborated by the search snippets.")
+    # A structured, profile-attributed role/company outweighs a namesake's neat handle.
+    # Career context improves identity ranking, never the ownership/officialness gate.
+    if person.profession and candidate.job_title:
+        role_match = title_match_level(person.profession, candidate.job_title)
+        if role_match:
+            score += 48 if role_match == "exact" else 32
+            candidate.evidence.extend(
+                evidence for evidence in candidate.professional_evidence
+                if evidence.description.startswith("Job title")
+            )
+            if role_match == "compatible":
+                candidate.cautions.append("The indexed role matches, but the requested seniority was not confirmed.")
+        else:
+            candidate.cautions.append("The indexed job title differs from the requested profession.")
+    if person.organization and candidate.company and contains_name(candidate.company, person.organization):
+        score += 28
+        candidate.evidence.extend(
+            evidence for evidence in candidate.professional_evidence
+            if evidence.description.startswith("Company")
+        )
     strong = {e.source_url for e in candidate.evidence if e.strength == "strong"}
     score += min(len(strong), 2) * 25
     fan = has_fan_signal(text) or bool(re.search(r"(?:fanpage|fanclub|parody|unofficial)", candidate.handle, re.I))

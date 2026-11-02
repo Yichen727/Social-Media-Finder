@@ -74,3 +74,26 @@ def test_candidate_links_and_failure_details_are_available():
     assert any("TimeoutError: timeout" in element.value for element in app.text)
     assert any("incomplete" in warning.value for warning in app.warning)
     assert any(button.proto.url == "https://x.com/alexmorgan" for button in app.get("link_button"))
+
+
+def test_linkedin_role_and_company_are_visible_without_restoring_removed_panels():
+    from finder.models import Person, SearchHit
+    from finder.profile_parser import extract_candidates
+    from finder.identity_matcher import rank_candidates
+
+    candidates = rank_candidates(extract_candidates([
+        SearchHit("Alex Morgan - Example Studios | LinkedIn",
+                  "https://www.linkedin.com/in/alex-morgan-123/",
+                  "Senior Creative Producer at Example Studios / Agency Group")
+    ], Platform.LINKEDIN), Person("Alex Morgan", "Senior Creative Producer"))
+    app = AppTest.from_file(APP).run()
+    app.text_input[0].set_value("Alex Morgan")
+    def result(person, platform):
+        return PlatformResult(platform, MatchStatus.POSSIBLE, candidates=candidates) if platform == Platform.LINKEDIN else PlatformResult(platform, MatchStatus.NONE)
+    with patch("finder.service.FinderService.search_platform", side_effect=result):
+        app.button[0].click().run()
+    assert not app.exception
+    assert any(caption.value == "Senior Creative Producer" for caption in app.caption)
+    assert any(caption.value == "Example Studios" for caption in app.caption)
+    assert not app.metric
+    assert not any(expander.label == "Why this profile?" for expander in app.expander)
