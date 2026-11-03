@@ -114,7 +114,8 @@ def test_evidence_and_rerenders_do_not_rerun_extraction_or_read_docx(tmp_path):
         next(widget for widget in app.text_input if widget.label == "Transcript folder").set_value(str(tmp_path))
         button(app, "Find speakers").click().run()
         review = app.session_state["speaker_workspace"]["review"]
-        assert review.values()[2] == "Manuel Rabaté"
+        assert review.values()[2] == "Manuel Rabaté*"
+        assert any("* = name mentioned" in caption.value for caption in app.caption)
         with patch.object(SpeakerExtractor, "extract_all", side_effect=AssertionError("Do not repeat")), \
                 patch.object(SpeakerExtractor, "read_opening", side_effect=AssertionError("Do not reread")):
             next(widget for widget in app.selectbox if widget.label == "Talk").set_value(2).run()

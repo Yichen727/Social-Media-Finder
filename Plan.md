@@ -6,15 +6,15 @@ Status: milestones 1–3 completed, 3 November 2026. CSV import, ordered main-sp
 
 Deliver two stages:
 
-1. Detect and fill the **main speaker** for the **93 numbered talks**. Use the following sources in this exact order:
+1. Detect and fill **speaker information** for the **93 numbered talks**. Use the following sources in this exact order:
    1. The row's `High-res video name`.
    2. The same row's `YouTube Caption`.
    3. Opening paragraphs of the matching DOCX in the transcript folder.
 2. Transfer a reviewed main speaker's name into the existing social search form. The user chooses platforms and starts the search.
 
-**As soon as a source successfully identifies the main speaker, fill `Speakers` and stop processing that row. Do not analyze lower-priority sources to verify, enrich, or add names after success.** If all three sources fail, leave the blank speaker cell blank.
+**As soon as a source successfully produces names under its source policy, fill `Speakers` and stop processing that row. Do not analyze lower-priority sources to verify, enrich, or add names after success.** If all three sources fail, leave the blank speaker cell blank.
 
-Updated title policy, confirmed 3 November 2026: `Speakers` can contain all explicitly named title participants, including conversation partners or a title-named host. Preserve their order and join names with `; `. Ref 26 includes both Ai Da and Tim Marlow; Ref 42 is Kader Attia. For caption/transcript fallback, the existing main-speaker role checks remain: do not select a moderator or introducer simply because they appear first or introduce themselves.
+Updated title policy, confirmed 3 November 2026: `Speakers` can contain all explicitly named title participants, including conversation partners or a title-named host. Preserve their order and join names with `; `. Ref 26 includes both Ai Da and Tim Marlow; Ref 42 is Kader Attia. Caption fallback retains the main-speaker role check. Transcript fallback now collects name candidates regardless of role, including partial names supported by an introduction/address; every transcript candidate is marked with `*` in the preview and export.
 
 Keep the current concise interface and search-index-based social finder. The reverted Playwright experiment is outside this plan. No automatic searches of all imported names are included.
 
@@ -67,9 +67,9 @@ Each source extractor returns one of four internal outcomes:
 | Ambiguous | Names appear, but the main speaker cannot be established | Continue to the next source; do not fill with the first name or a complete attendee list. |
 | Unavailable | Source is blank, a placeholder, missing, or unreadable | Continue to the next source. |
 
-Title success requires complete names explicitly attributed to the talk or conversation. More than one title participant is allowed under the updated policy. Caption/transcript success still requires evidence of the main-speaker role. Damaged or incomplete names, institutions, and unrelated mentions remain unresolved.
+Title success requires complete names explicitly attributed to the talk or conversation. More than one title participant is allowed under the updated policy. Caption success still requires main-speaker evidence. Transcript success collects supported name mentions, including people merely mentioned, and requires manual review via `*`; it does not invent a full identity from a partial name. Institutions and generic topic text are filtered where the rules recognize them.
 
-Explicitly named title participants are now a confirmed exception to the original single-main-speaker policy. A title can end processing with several names. For fallback captions or transcripts, a participant list without an identifiable main role still remains unresolved; do not choose its first panelist arbitrarily.
+Explicitly named title participants are now a confirmed exception to the original single-main-speaker policy. A title can end processing with several names. Caption participant lists without an identifiable main role remain unresolved. Transcript name lists are now allowed regardless of role and are marked for review rather than reduced to the first panelist.
 
 The CSV is parsed once, so its caption text may already be in memory. Early stopping means the caption extractor is not called after a title succeeds, and the transcript is not indexed/read for that row after either earlier source succeeds.
 
@@ -110,9 +110,11 @@ Read DOCX text locally, preserving paragraph order and joining text runs. Standa
 
 Proposed initial bounds are the first three minutes of timestamped speech and at most 8,000 characters; use a bounded paragraph window if timestamps are absent. Tune these limits against the actual sample.
 
-Look for self-introduction and explicit introduction of the featured speaker, such as `who will be giving a talk`. Distinguish a main speaker from an announcer or moderator saying `I'm ...` before introducing someone else. A diarization label such as `Speaker 78` is not an identity and must not be linked across documents.
+Collect name candidates throughout the bounded opening rather than requiring a main-speaker role. Include introductions, moderators, panelists, acknowledgments, quotations, and other mentioned people. Recognize Unicode names, initials, and cue-backed partial names; retain the supplied spelling and never invent a missing surname. Diarization labels such as `Speaker 78` are not names.
 
-On success, fill the proposed speaker and retain the file, timestamp/paragraph, and supporting excerpt. If no main speaker can be established, leave the speaker cell blank. No fourth source, cross-document name expansion, external search, or model-memory completion follows.
+Deduplicate exact normalized mentions in first-appearance order. Preserve individual source paragraphs/timestamps and keep undecorated names in `Detection.names`. Set `requires_review=True`; serialize each candidate as `Name*` when populating the table or CSV. Existing uploaded values and successful title/caption names receive no automatic marker.
+
+Show one marker legend and evidence on demand. Users can edit or remove candidates and remove `*` after checking. Approval does not silently remove markers. No supported candidates means blank; no fourth source, cross-document identity completion, external search, or model-memory lookup follows. These remain lexical candidates: locations, works, and organizations can be misclassified, and the opening window may miss people. Do not report the number of nonblank rows as extraction accuracy.
 
 ### 3.6 Examples from the supplied material
 
@@ -120,11 +122,11 @@ On success, fill the proposed speaker and retain the file, timestamp/paragraph, 
 | --- | --- |
 | Clear `Keynote by [name]` in the video title | Fill the main speaker from the title; skip caption and transcript extraction. |
 | Title has no usable name; caption explicitly identifies the main speaker | Fill from the caption; do not open the transcript. |
-| Ref 5: damaged title name; caption is `No description`; transcript has Alexandra Munroe introducing András Szántó as the person giving the talk | Use the transcript to identify András Szántó. Do not select the introducer just because she introduces herself first. |
-| Ref 18: institution-only title; caption is `No description`; transcript starts with Manuel Rabaté presenting the Louvre Abu Dhabi case study | Reject the institution as a person and use the main presenter's transcript evidence. |
-| Ref 27: caption says `Moderated by Alexandra Munroe` and lists four people under `Speakers:` | Do not fill Alexandra as the main speaker or select the first panelist. Continue to the transcript; leave blank if it still provides no identifiable main speaker. |
+| Ref 5: damaged title name; caption is `No description`; transcript has Alexandra Munroe introducing András Szántó as the person giving the talk | Collect both Alexandra Munroe and András Szántó as marked transcript candidates; do not claim that both are main speakers. |
+| Ref 18: institution-only title; caption is `No description`; transcript starts with Manuel Rabaté presenting the Louvre Abu Dhabi case study | Reject the institution as a person; collect Manuel Rabaté and any other recognized name mentions in the opening, with `*`. |
+| Ref 27: caption says `Moderated by Alexandra Munroe` and lists four people under `Speakers:` | Caption does not select a main speaker. Continue to transcript and collect recognized mentions, including Alexandra and panelists, each marked with `*`. |
 | Ref 9: title explicitly names Christopher Kulendran Thomas with X Zhu-Nowell | Retain both title names in order and stop; no transcript spelling correction or external identity completion. |
-| Ref 32: caption does not establish a main speaker; transcript welcomes only `Alexandra` and thanks `Mohammed` | Do not invent surnames. Leave blank if the permitted transcript window cannot identify the main speaker adequately. |
+| Ref 32: caption does not establish a main speaker; transcript welcomes only `Alexandra` and thanks `Mohammed` | Keep supported partial names as `Alexandra*` and `Mohammed*`; do not invent surnames. |
 
 ### 3.7 Review and completed CSV
 
@@ -146,7 +148,7 @@ An optional LLM would help interpret names and main-speaker roles within the cur
 - Return structured names, roles, evidence quotations, and source locations; reject unsupported names or a main-speaker claim without supporting evidence.
 - Do not let source text become application instructions, invoke tools/web searches, or supply surnames from model memory.
 
-No LLM stage may read lower-priority sources after success, introduce `YouTube title` as a hidden fourth source, or turn a multi-person panel into one guessed main speaker. Invalid or inconclusive model output is a failed extraction and proceeds to the next permitted source, or stays blank after the transcript.
+No LLM stage may read lower-priority sources after success, introduce `YouTube title` as a hidden fourth source, or guess identities. Any future transcript adapter must follow the current all-mentions/candidate-marker policy. Invalid or inconclusive model output is a failed extraction and proceeds to the next permitted source, or stays blank after the transcript.
 
 The rule-only path should work without an API key. Provider choice, credentials, external processing, cost, and latency remain discussion items only if optional model assistance is adopted. No model calls are made during planning.
 
@@ -165,6 +167,8 @@ Group exact normalized duplicate names only for search convenience while retaini
 Automatic batch searching, background search queues, and searches for moderators/guests are outside this release.
 
 ## 6. Implementation sequence
+
+Transcript-policy update: collect opening name mentions regardless of main-speaker role, preserve per-name evidence, and mark each transcript candidate with `*` in preview/export. The corrected-file run produced 38 title rows and 48 transcript-candidate rows, with three unresolved; these are not verified-speaker counts. All 178 focused tests passed. See [validation/transcript-candidates.md](validation/transcript-candidates.md), including known false positives and limits.
 
 Title-rule update: all nine user feedback cases pass on the corrected UTF-8 CSV, including both participants in Ref 26. Title successes on its 89 pending rows increased from 27 to 38 under the revised policy; total proposals are 39, with 50 unresolved. All 162 focused tests passed. See [validation/speaker-titles.md](validation/speaker-titles.md). Earlier milestone counts below are historical runs.
 
@@ -199,7 +203,7 @@ Required checks:
 - `No description` or a missing caption: proceed to transcript only after title failure.
 - Both earlier sources fail: exact reference matching reaches the correct DOCX.
 - All three sources fail or remain ambiguous: the blank speaker cell stays blank.
-- Caption/transcript fallback does not accept an announcer, moderator, institution, acknowledgment, or unrelated mention as the main speaker. Explicit title-named participants follow the updated multi-name policy.
+- Caption fallback does not assume an announcer/moderator is the main speaker. Transcript fallback may retain such name mentions, all with `*`, while filtering recognized institutions and non-person terms.
 - A multi-person `Speakers:` list is not arbitrarily reduced to its first person.
 - No `YouTube title`, external search, or cross-document identity completion is introduced as an extra source.
 - All 161 out-of-scope rows, four existing speaker cells, and original columns are preserved by default.
@@ -212,6 +216,6 @@ Required checks:
 
 Scope, role, source order, and stopping behavior are settled and should not be reopened as defaults. The remaining design choice is whether to add optional LLM assistance immediately or evaluate the deterministic baseline first; the recommendation remains baseline first.
 
-Explicit title participants can now fill multiple names. Caption/transcript panels without an identifiable main speaker remain unresolved/blank for review; this change does not enable indiscriminate extraction of everyone mentioned in prose.
+Explicit title participants can now fill multiple names. Caption panels without an identifiable main speaker remain unresolved. Transcript fallback collects recognized name mentions regardless of role, with `*` and source evidence; unrecognized names can still be missed.
 
 Milestones 1–3 are complete. The next milestone is an explicit handoff of a reviewed main-speaker name to the social search form. Prefilling must retain platform choices and must not trigger a search automatically.

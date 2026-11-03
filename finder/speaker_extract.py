@@ -1,6 +1,6 @@
 """Deterministic speaker proposals: video title, CSV caption, then DOCX.
 
-No network/model calls or source-file writes. Ambiguous participation stays blank.
+No network/model calls or source-file writes. Transcript mentions need review.
 """
 
 from dataclasses import dataclass
@@ -38,12 +38,18 @@ TITLE_PREFIX = re.compile(
 TITLE_CONVERSATION = re.compile(r"\s+in\s+conversation\s+with\s+", re.I)
 TITLE_NAMES = re.compile(r"\s+in\s+conversation\s+with\s+|\s+(?:and|with)\s+|\s*&\s*|\s*[,;]\s*", re.I)
 TITLE_END = re.compile(r"\s+[_|]\s+|\s+[–—-]\s+|[–—]|-(?=(?:creative|the|a|an)\b)|:", re.I)
-SELF_INTRO = re.compile(r"\b(?:my\s+name\s+is|I\s+am|I'm|I’m)\s*[,;:]?\s+", re.I)
 TIMESTAMP = re.compile(r"^\s*\[(\d{2}):(\d{2}):(\d{2})\]\s*")
 SPEAKER_LABEL = re.compile(r"^\s*Speaker\s+([0-9]+)\s*:\s*", re.I)
-GROUP = re.compile(r"\b(?:panel(?:ists?|\s+discussion)?|moderator|moderating|moderated|speakers(?=\s*:)|joined\s+by|our\s+guests|my\s+guests|fellow\s+panelists)\b", re.I)
-INTRODUCER = re.compile(r"\b(?:introduc(?:e|ing)\s+(?:you|our|the\s+(?:speaker|guest))|moderate\s+(?:this|the))\b", re.I)
 UNAVAILABLE = frozenset({"", "no description", "no description available", "none", "n/a", "na", "null", "not available", "-"})
+
+
+@dataclass(frozen=True)
+class NameMention:
+    name: str
+    evidence: str
+    paragraph: int
+    timestamp: str = ""
+    speaker_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -57,6 +63,8 @@ class Detection:
     paragraph: int | None = None
     timestamp: str = ""
     speaker_label: str = ""
+    mentions: tuple[NameMention, ...] = ()
+    requires_review: bool = False
 
     @property
     def names(self) -> tuple[str, ...]:
@@ -82,7 +90,11 @@ class SpeakerProposal:
 
     @property
     def proposed_value(self) -> str:
-        return self.name if self.status == "found" else self.original_value
+        if self.status != "found":
+            return self.original_value
+        if self.detection.requires_review:
+            return "; ".join(name + "*" for name in self.detection.names)
+        return self.name
 
 
 @dataclass(frozen=True)
@@ -228,81 +240,155 @@ def extract_caption(text: str) -> Detection:
     return result
 
 
-def _main_mentions(text: str):
-    candidates = []
-    ambiguous = False
-    for cue in (
-        r"\b(?:our|the|today's)?\s*(?:main|keynote|featured)\s+(?:speaker|presenter)\s*(?:is\s+|[:,–—-]\s*)?",
-        r"\b(?:discussion|conversation|interview)\s+with\s+(?:the|our)\s+(?:artist|author|filmmaker)\s*,?\s*",
-    ):
-        for match in re.finditer(cue, text, re.I):
-            context = re.split(r"[.!?]\s+", text[:match.start()])[-1]
-            if re.search(r"\b(?:yesterday|previous|earlier|last\s+year|next\s+year)\b", context, re.I):
+# Candidate recognition is deliberately lexical and local. Asterisks in the
+# review/export layer distinguish these mentions from attributed title names.
+MENTION_WORD = re.compile(r"[^\W\d_]+(?:[’'\-.][^\W\d_]+)*\.?", re.UNICODE)
+MENTION_STOP = NOT_NAMES | frozenset((
+    "uh um ah mr mrs ms miss dear distinguished excellencies excellency "
+    "professor doctor honourable honorable hello welcome well so now yes okay "
+    "director-general deputy associate cofounder co-founder managing editor "
+    "ceo cfo coo producer general advisor adviser chair chairman chairwoman "
+    "dct cnn bbc covid online zoom united nations union european commission "
+    "international national royal federal office council academy centre center "
+    "business design biennale biennial exhibition festival award prize recording "
+    "financial diplomatic forum connect broadcast policy policies creative social "
+    "contemporary expanded field behind being human cultural programme program "
+    "making local sustainable global artificial intelligence digital technology "
+    "thank thanks congratulations happy day women's audience session opening "
+    "i'd i've i'll i'm i'd i’ve i’ll i’m oh it's it’s but if could would should can "
+    "because taking first second third last next then also just only very really "
+    "for of as to at by about across after before these those there here which "
+    "development tourism affairs economic economy section materials product prime "
+    "vice chancellor nyu latin african asian american canadian british israeli "
+    "east west south north southeast industrial revolution olympics paralympics "
+    "standing commis cooperation comprehensive best practices golden globe-nominated "
+    "what how where why when whose whom us musical minds teach"
+).split())
+MENTION_ORGANIZATIONS = ORGANIZATIONS | frozenset((
+    "gallery galleries productions production entertainment films pictures theater "
+    "theatres theatre quartet orchestra ensemble band club network agency bureau "
+    "endowment lab labs transport partnership agreement association associates "
+    "pavilion nation districts motor hall opera project projects"
+).split())
+NON_PERSON_PHRASES = frozenset({
+    "new york", "new york city", "abu dhabi", "cape town", "south africa",
+    "united states", "united kingdom", "middle east", "blue note",
+    "new zealand", "saudi arabia", "silicon valley", "san francisco", "los angeles",
+    "tel aviv", "mexico city", "saadiyat island", "camden town", "rio de janeiro",
+    "cold war",
+})
+MENTION_CUE = re.compile(
+    r"\b(?:my\s+name\s+is|I\s+am|I'm|I’m|"
+    r"(?:please\s+)?welcom(?:e|ing)|thank(?:s|\s+you)(?:\s+(?:so\s+)?much)?|"
+    r"joined\s+by|introduce(?:\s+you\s+to)?|with\s+me|our\s+guests?\s*(?:are|is|:))"
+    r"\s*[,;:]?\s+", re.I,
+)
+
+
+def _mention_runs(text: str):
+    """Yield contiguous proper-name-shaped runs with source positions."""
+    run = []
+    previous_end = 0
+    for match in MENTION_WORD.finditer(text):
+        word = match[0]
+        lower = word.casefold()
+        capitalized = word[0].isupper() or all(ord(char) > 127 for char in word)
+        particle = lower in PARTICLES | SUFFIXES and bool(run)
+        sentence_end = (bool(run) and run[-1][0].endswith(".") and len(run[-1][0].rstrip(".")) > 1
+                        and run[-1][0].casefold() not in HONORIFICS | SUFFIXES)
+        if run and (sentence_end or not text[previous_end:match.start()].isspace() or not (capitalized or particle)):
+            yield run
+            run = []
+        if capitalized or particle:
+            run.append(match)
+        previous_end = match.end()
+    if run:
+        yield run
+
+
+def _mention_names(text: str):
+    """Recognize full-name candidates anywhere; cue-backed short names too."""
+    found = []
+    cues = list(MENTION_CUE.finditer(text))
+    for run in _mention_runs(text):
+        # Never salvage a city/name prefix from a capitalized institution name.
+        if any(word[0].casefold().rstrip(".") in MENTION_ORGANIZATIONS for word in run):
+            continue
+        segments = []
+        current = []
+        for word in run:
+            lower = word[0].casefold()
+            middle_initial = bool(current) and len(word[0]) == 1 and word[0].isupper()
+            if lower in MENTION_STOP - HONORIFICS and not middle_initial:
+                if current:
+                    segments.append(current)
+                    current = []
+            else:
+                current.append(word)
+        if current:
+            segments.append(current)
+        for segment in segments:
+            start, end = segment[0].start(), segment[-1].end()
+            candidate = text[start:end].strip().rstrip(".")
+            candidate = re.sub(r"[’']s$", "", candidate)
+            if candidate.casefold() in NON_PERSON_PHRASES:
                 continue
-            tail = text[match.end():]
-            name = _name_prefix(tail)
-            if _multiple_names(tail):
-                ambiguous = True
-            elif name:
-                candidates.append(name)
-    if re.search(r"\b(?:introduce|introducing|welcome)\b", text, re.I):
-        giving = r"\b(?:who\s+)?will\s+(?:be\s+)?(?:giving|give|delivering|deliver|presenting|present)\s+(?:a|the|his|her)\s+(?:talk|keynote|address|presentation)\b"
-        for match in re.finditer(giving, text, re.I):
-            left = text[max(0, match.start() - 180):match.start()].rstrip(" ,")
-            left = re.split(r"[,;:]", left)[-1]
-            words = left.split()
-            for start in range(len(words)):
-                fragment = " ".join(words[start:])
-                name = _name_prefix(fragment)
-                if name and name == fragment.strip():
-                    candidates.append(name)
-                    break
-    return candidates, ambiguous
+            before = text[max(0, start - 220):start]
+            if (re.search(r"\b(?:book|album|band|film|song|report)\b", before, re.I)
+                    and re.search(r"\b(?:called|titled|named)\s*[\"“']?$", before, re.I)):
+                continue
+            cue_backed = any(not text[cue.end():start].strip(" ,;:") for cue in cues if cue.end() <= start)
+            # Direct address and coordination after an introduction also expose
+            # partial names. They remain partial, never completed from memory.
+            direct_address = bool(re.match(r",\s*(?:please|thank\s+you|thanks)\b", text[end:], re.I))
+            coordinated = False
+            for cue in cues:
+                if not 0 <= start - cue.end() <= 120:
+                    continue
+                between = text[cue.end():start]
+                words = [word[0] for word in MENTION_WORD.finditer(between)]
+                if (re.search(r"(?:\band|&)\s*$", between, re.I) and words
+                        and all((word[0].isupper() and word.casefold() not in MENTION_STOP)
+                                or word.casefold() in PARTICLES | HONORIFICS | SUFFIXES | {"and"}
+                                for word in words)):
+                    coordinated = True
+            short = cue_backed or direct_address or coordinated
+            name = _name_prefix(candidate, mononym=short, initials=True)
+            meaningful = [part for part in candidate.split() if part.casefold() not in HONORIFICS | PARTICLES | SUFFIXES]
+            if len(meaningful) < 2 and not short:
+                continue
+            if name and name == candidate:
+                found.append((start, name))
+    return sorted(found)
 
 
 def extract_transcript(paragraphs: tuple[TranscriptParagraph, ...], path: Path | None = None,
                        *, session_context: str = "") -> Detection:
+    """Collect opening name mentions, regardless of participation or main role.
+
+    session_context remains accepted for existing callers; it no longer rejects
+    moderator/panel mentions. Names are candidates, not verified identities.
+    """
     source = "transcript"
     if not paragraphs:
         return Detection(source, "unavailable", reason="The transcript opening contains no usable text.", path=path)
-    featured = []
-    self_names = []
-    featured_ambiguous = False
-    # Already-attempted CSV fields can establish a panel even when its moderator
-    # spends the entire bounded DOCX opening speaking alone.
-    group = bool(GROUP.search(session_context.replace("_", " ")))
-    introducer = False
-    labels = set()
-    metadata = {}
+    mentions = {}
     for paragraph in paragraphs:
         text = _without_fillers(paragraph.text)
         if re.match(r"^\d+\.\s", text):
-            continue  # Document headings are not spoken introductions.
-        names, ambiguous = _main_mentions(text)
-        featured_ambiguous |= ambiguous
-        for name in names:
-            featured.append((name, paragraph.text))
-            metadata.setdefault(name.casefold(), paragraph)
-        for match in SELF_INTRO.finditer(text):
-            name = _name_prefix(text[match.end():])
-            if name:
-                self_names.append((name, paragraph.text))
-                metadata.setdefault(name.casefold(), paragraph)
-        group |= bool(GROUP.search(text))
-        introducer |= bool(INTRODUCER.search(text))
-        if paragraph.speaker_label:
-            labels.add(paragraph.speaker_label)
-    if featured or featured_ambiguous:
-        selected = _selection(source, featured, ambiguous=featured_ambiguous)
-    elif group or introducer or len(labels) > 1:
-        selected = Detection(source, "ambiguous", reason="The opening describes a panel, introducer, or multiple unidentified roles.")
-    else:
-        selected = _selection(source, self_names)
-    if selected.status != "found":
-        return Detection(source, selected.status, reason=selected.reason, path=path)
-    paragraph = metadata[selected.name.casefold()]
-    return Detection(source, "found", selected.name, selected.evidence, path=path,
-                     paragraph=paragraph.index, timestamp=paragraph.timestamp, speaker_label=paragraph.speaker_label)
+            continue
+        for _, name in _mention_names(text):
+            mentions.setdefault(name.casefold(), NameMention(name, paragraph.text, paragraph.index,
+                                                           paragraph.timestamp, paragraph.speaker_label))
+    if not mentions:
+        return Detection(source, "not_found", reason="No supported name candidates were found in the opening.", path=path)
+    evidence = tuple(mentions.values())
+    excerpts = "\n\n".join(dict.fromkeys(mention.evidence for mention in evidence))
+    first = evidence[0]
+    return Detection(source, "found", "; ".join(mention.name for mention in evidence), excerpts,
+                     reason="Transcript name mentions require manual review; participation is not verified.",
+                     path=path, paragraph=first.paragraph, timestamp=first.timestamp,
+                     speaker_label=first.speaker_label, mentions=evidence, requires_review=True)
 
 
 class SpeakerExtractor:

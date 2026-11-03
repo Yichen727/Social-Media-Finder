@@ -1,5 +1,7 @@
 # Ordered main-speaker extraction — milestone 2 verification
 
+Latest transcript behavior: opening name mentions are now collected regardless of role and marked with `*`. See [transcript-candidates.md](transcript-candidates.md). This document retains the original, stricter milestone 2 results.
+
 Historical baseline: the title policy has since been expanded to include explicitly named multiple participants. Current rules and corrected-CSV results are in [speaker-titles.md](speaker-titles.md). The counts below describe the original milestone 2 run.
 
 Recorded on 3 November 2026. The deterministic backend is implemented in `finder/speaker_extract.py`. No dependencies were added. The upload/review interface and completed-CSV download remain milestone 3; social-search handoff remains milestone 4.

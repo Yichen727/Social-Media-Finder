@@ -35,7 +35,7 @@ class SpeakerReview:
             value = row.values[self.table.speaker_column]
             proposal = self.proposals.get(row.row_id)
             if not row.has_speaker and proposal and proposal.status == "found":
-                value = proposal.name
+                value = proposal.proposed_value
             values[row.row_id] = self.edits.get(row.row_id, value)
         return values
 

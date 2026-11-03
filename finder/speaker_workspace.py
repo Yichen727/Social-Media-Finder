@@ -41,7 +41,18 @@ def _evidence(review: SpeakerReview, generation: int):
             if found.path:
                 st.caption(" · ".join(str(value) for value in
                                      (found.path.name, f"Paragraph {found.paragraph}", found.timestamp) if value))
-            st.text(found.evidence)
+            mentions = getattr(found, "mentions", ())
+            if mentions:
+                st.caption("* Transcript name candidates: review participation and spelling before using them.")
+                groups = {}
+                for mention in mentions:
+                    key = (mention.paragraph, mention.timestamp, mention.evidence)
+                    groups.setdefault(key, []).append(mention.name)
+                for (paragraph, timestamp, excerpt), names in groups.items():
+                    st.caption(f"{'; '.join(names)} · Paragraph {paragraph} {timestamp}")
+                    st.text(excerpt)
+            else:
+                st.text(found.evidence)
         else:
             for attempt in proposal.attempts:
                 st.caption(f"{SOURCE_LABELS[attempt.source]}: {attempt.reason}")
@@ -89,6 +100,11 @@ def render_speaker_workspace():
         state["token"] = token
         state["generation"] = state.get("generation", 0) + 1
     review = state["review"]
+    if not isinstance(review, SpeakerReview):
+        # Migrate state retained across a source-code reload without losing edits.
+        review = SpeakerReview(review.table, dict(review.proposals), dict(review.edits), review.approved)
+        state["review"] = review
+        state["generation"] += 1
     st.caption(f"{state['filename']} · {len(review.table.eligible_rows)} numbered talks · "
                f"{len(review.table.rows)} total rows · {review.table.encoding}")
     if not review.table.eligible_rows:
@@ -100,6 +116,8 @@ def render_speaker_workspace():
                               help="Discard manual edits and approval; keep the latest extraction suggestions.")
     st.subheader("Review speakers")
     st.caption("Edit or clear names, then apply reviewed changes to enable download. Existing values are kept by default.")
+    if any(getattr(proposal.detection, "requires_review", False) for proposal in review.proposals.values()):
+        st.caption("* = name mentioned in a transcript; may be a host or someone mentioned in passing. Remove * after checking.")
     generation = state["generation"]
     editor_key = f"speaker_editor_{generation}"
     # Freeze widget input while editing. Feeding edited data back into the same

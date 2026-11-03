@@ -69,12 +69,12 @@ def test_placeholder_reaches_exact_matching_docx_and_keeps_evidence(tmp_path):
     assert "Manuel Rabaté" in evidence.evidence
 
 
-def test_unknown_sources_stay_blank_without_using_youtube_title(tmp_path):
+def test_partial_transcript_names_are_marked_without_using_youtube_title(tmp_path):
     docx(tmp_path / "32. Main.docx", [["[00:00:00] Speaker 140: Please welcome Alexandra from the Guggenheim. Mohammed, thank you for being here."]])
     table = table_for([["32", "Future Museums", "No description", "", "Keynote by Alexandra Munroe"]])
     proposal = SpeakerExtractor(TranscriptIndex(tmp_path)).extract_all(table)[0]
-    assert proposal.status == "unresolved"
-    assert proposal.proposed_value == ""
+    assert proposal.status == "found"
+    assert proposal.proposed_value == "Alexandra*; Mohammed*"
     assert len(proposal.attempts) == 3
 
 
@@ -145,50 +145,58 @@ def test_caption_lists_and_unattributed_names_are_not_main_speakers(caption):
     assert extract_caption(caption).status != "found"
 
 
-def test_introducer_does_not_replace_featured_speaker():
+def test_introducer_and_featured_speaker_are_both_candidates():
     text = ("Hello, I'm Alexandra Munroe, Senior Curator. It is a great pleasure to introduce you today "
             "to my friend and colleague, András Szántó, who will be giving a talk, The Museum in an Expanded Field.")
     result = extract_transcript((TranscriptParagraph(2, text, "[00:00:00]", 0, "11"),))
-    assert result.name == "András Szántó"
+    assert result.names == ("Alexandra Munroe", "András Szántó")
+    assert result.requires_review
     assert result.paragraph == 2
 
 
 def test_featured_artist_differs_from_self_introducing_curator():
     text = ("My name is X Xuewu Noel, assistant curator. Welcome to a screening followed by a discussion "
             "with the artist, Christopher Kulendran Thomas, and me.")
-    assert extract_transcript((TranscriptParagraph(1, text),)).name == "Christopher Kulendran Thomas"
+    assert extract_transcript((TranscriptParagraph(1, text),)).names == ("X Xuewu Noel", "Christopher Kulendran Thomas")
 
 
-@pytest.mark.parametrize("text", [
-    "I'm Alexandra Munroe, curator. I will moderate this panel with Philip Tinari and Reem Fadda.",
-    "My name is Priya Kanchandani. Thanks Tim for the previous conversation. I am joined by Aidan Meller and Suhair Khan.",
-    "Hello, I'm Alexandra. Thank you Mohammed.",
-    "Hello, I'm Alexandra Munroe, and I will introduce you to our guest.",
-    "Yesterday our keynote speaker was Jane Smith. Thank you for coming today.",
+@pytest.mark.parametrize("text,names", [
+    ("I'm Alexandra Munroe, curator. I will moderate this panel with Philip Tinari and Reem Fadda.",
+     ("Alexandra Munroe", "Philip Tinari", "Reem Fadda")),
+    ("My name is Priya Kanchandani. Thanks Tim for the previous conversation. I am joined by Aidan Meller and Suhair Khan.",
+     ("Priya Kanchandani", "Tim", "Aidan Meller", "Suhair Khan")),
+    ("Hello, I'm Alexandra. Thank you Mohammed.", ("Alexandra", "Mohammed")),
+    ("Hello, I'm Alexandra Munroe, and I will introduce you to our guest.", ("Alexandra Munroe",)),
+    ("Yesterday our keynote speaker was Jane Smith. Thank you for coming today.", ("Jane Smith",)),
 ])
-def test_transcript_does_not_accept_panels_partial_names_or_previous_speakers(text):
-    assert extract_transcript((TranscriptParagraph(1, text),)).status != "found"
+def test_transcript_roles_and_previous_mentions_are_now_candidates(text, names):
+    result = extract_transcript((TranscriptParagraph(1, text),))
+    assert result.names == names
+    assert result.requires_review
 
 
-def test_multiple_self_introductions_are_ambiguous():
+def test_multiple_self_introductions_preserve_individual_evidence():
     paragraphs = (TranscriptParagraph(1, "I'm Jane Smith, a director.", speaker_label="1"),
                   TranscriptParagraph(2, "I'm John Doe, a curator.", speaker_label="2"))
-    assert extract_transcript(paragraphs).status == "ambiguous"
+    result = extract_transcript(paragraphs)
+    assert result.names == ("Jane Smith", "John Doe")
+    assert [(mention.paragraph, mention.speaker_label) for mention in result.mentions] == [(1, "1"), (2, "2")]
 
 
-def test_moderator_alone_in_opening_is_not_main_speaker_of_panel(tmp_path):
+def test_moderator_alone_in_opening_is_a_marked_candidate(tmp_path):
     docx(tmp_path / "20. Opening.docx", [["[00:00:00] Speaker 59: I'm Becky Anderson, host of a news show."]])
     table = table_for([["20", "Culture Summit Opening Panel_ Policies", "Moderated by Becky Anderson, with several guests.", "", ""]])
     proposal = SpeakerExtractor(TranscriptIndex(tmp_path)).extract_all(table)[0]
-    assert proposal.status == "unresolved"
-    assert proposal.proposed_value == ""
+    assert proposal.status == "found"
+    assert proposal.name == "Becky Anderson"
+    assert proposal.proposed_value == "Becky Anderson*"
 
 
-def test_named_featured_speaker_can_still_be_identified_with_moderator_context():
+def test_csv_role_context_no_longer_rejects_transcript_candidates_or_adds_names():
     paragraphs = (TranscriptParagraph(1, "I'm Jane Smith, curator. Our keynote speaker is András Szántó."),)
-    assert extract_transcript(paragraphs, session_context="Moderator: Jane Smith").name == "András Szántó"
+    assert extract_transcript(paragraphs, session_context="Moderator: Jane Smith").names == ("Jane Smith", "András Szántó")
     solo_intro = (TranscriptParagraph(1, "I'm Jane Smith, a curator."),)
-    assert extract_transcript(solo_intro, session_context="Speakers: Jane Smith; John Doe").status == "ambiguous"
+    assert extract_transcript(solo_intro, session_context="Speakers: Jane Smith; John Doe").names == ("Jane Smith",)
 
 
 def test_filler_cleanup_does_not_change_name_tokens():
