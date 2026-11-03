@@ -1,0 +1,881 @@
+{
+  "source_filename": "NEW Culture Summit High Resolution Content with Views and Metrics(Mapped Content) (1).csv",
+  "source_sha256": "3d5bffa3d9d3d4d19c61024cf437b3027ad8e727e6705b2fa6557d61c1addfed",
+  "encoding": "utf-8-sig",
+  "rows": 254,
+  "columns": 21,
+  "eligible": 93,
+  "counts": {
+    "excluded": 161,
+    "preserved": 4,
+    "found": 39,
+    "unresolved": 50
+  },
+  "winning_sources": {
+    "video_title": 38,
+    "transcript": 1
+  },
+  "old_title_successes_on_pending_rows": 27,
+  "new_title_successes_on_pending_rows": 38,
+  "docx_openings_read": 51,
+  "feedback_cases_passed": 9,
+  "all_previous_title_successes_preserved": true,
+  "utf8_arabic_source_cells_preserved": true,
+  "all_non_speaker_cells_preserved": true,
+  "source_files_unchanged": true,
+  "feedback_ui_title_only_export_passed": true,
+  "focused_tests_passed": 162,
+  "feedback_expected": {
+    "13": "Maja Hoffmann; Hashim Sarkis",
+    "25": "Rita Wilson",
+    "26": "Ai Da; Tim Marlow",
+    "30": "Eddie Opara; Huda AbiFares; Sumitra Upham",
+    "36": "Refik Anadol; Ralph Nauta",
+    "41": "Sumayya Vally; Tim Marlow",
+    "42": "Kader Attia",
+    "47": "Michael Uslan; David Uslan",
+    "53": "David Henry Hwang; Rana Kazkaz"
+  },
+  "records": [
+    {
+      "reference": 1,
+      "title": "Keynote by ADONIS _ كلمة رئيسية يلقيها أدونيس.mp4",
+      "existing_speaker": "Adonis (Ali Ahmad Said Esber",
+      "old_title_name": "ADONIS",
+      "title_status": "found",
+      "names": [
+        "ADONIS"
+      ]
+    },
+    {
+      "reference": 2,
+      "title": "Sheikh Zayed bin Sultan bin Khalifa Al Nahyan _  الشيخ زايد بن سلطان بن خليفة آل نهيان.mp4",
+      "existing_speaker": "Sheikh Zayed bin Sultan bin Khalifa Al Nahyan, Minister of State Office, Ministry of Foreign Affairs and International Cooperation",
+      "old_title_name": "Sheikh Zayed bin Sultan bin Khalifa Al Nahyan",
+      "title_status": "found",
+      "names": [
+        "Sheikh Zayed bin Sultan bin Khalifa Al Nahyan"
+      ]
+    },
+    {
+      "reference": 3,
+      "title": "Sir David Adjaye _ سير ديفيد أدجاي.mp4",
+      "existing_speaker": "Sir David Adjaye",
+      "old_title_name": "Sir David Adjaye",
+      "title_status": "found",
+      "names": [
+        "Sir David Adjaye"
+      ]
+    },
+    {
+      "reference": 4,
+      "title": "Keynote by HE Sheikh Salem bin Khalid Al Qassimi.mp4",
+      "existing_speaker": "HE Sheikh Salem bin Khalid Al Qassimi",
+      "old_title_name": "HE Sheikh Salem bin Khalid Al Qassimi",
+      "title_status": "found",
+      "names": [
+        "HE Sheikh Salem bin Khalid Al Qassimi"
+      ]
+    },
+    {
+      "reference": 5,
+      "title": "Keynote Conversations_ András Szántó - The Museum in an Expanded Field.mp4",
+      "existing_speaker": "",
+      "old_title_name": "András Szántó",
+      "title_status": "found",
+      "names": [
+        "András Szántó"
+      ]
+    },
+    {
+      "reference": 6,
+      "title": "What Musical Minds Teach Us About Innovation_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 7,
+      "title": "AI and the Future of Culture _ الذكاء االصطناعي ومستقبل الثقافة.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 8,
+      "title": "Keynote by HE Omar Saif Ghobash _ كلمة افتتاحية سعادة عمر سيف غباش.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Omar Saif Ghobash",
+      "title_status": "found",
+      "names": [
+        "HE Omar Saif Ghobash"
+      ]
+    },
+    {
+      "reference": 9,
+      "title": "Screening + Conversation_ Christopher Kulendran Thomas with X Zhu-Nowell.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Christopher Kulendran Thomas",
+        "X Zhu-Nowell"
+      ]
+    },
+    {
+      "reference": 10,
+      "title": "Creative Conversation with Wole Soyinka _ حوار إبداعي مع وول سوينكا.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Wole Soyinka",
+      "title_status": "found",
+      "names": [
+        "Wole Soyinka"
+      ]
+    },
+    {
+      "reference": 11,
+      "title": "Keynote by Iyad Rahwan - Machine Culture.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Iyad Rahwan",
+      "title_status": "found",
+      "names": [
+        "Iyad Rahwan"
+      ]
+    },
+    {
+      "reference": 12,
+      "title": "Artist Talk_ Farah Al Qassimi.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Farah Al Qassimi",
+      "title_status": "found",
+      "names": [
+        "Farah Al Qassimi"
+      ]
+    },
+    {
+      "reference": 13,
+      "title": "Creative Conversation with Maja Hoffmann & Hashim Sarkis-Creative Alliances for a Sustainable World.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Maja Hoffmann",
+        "Hashim Sarkis"
+      ]
+    },
+    {
+      "reference": 14,
+      "title": "Making a Space Public _ ًكيف نصنع فضاءً عاما.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 15,
+      "title": "Creative conversation with Ayoung Kim _ حوار إبداعي مع أيونغ كيم.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Ayoung Kim",
+      "title_status": "found",
+      "names": [
+        "Ayoung Kim"
+      ]
+    },
+    {
+      "reference": 16,
+      "title": "Wrap up and Closing Panel _ الجلسة الختامية",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 17,
+      "title": "Impact Investment and Creative Industries.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 18,
+      "title": "From Challenges to Opportunities - A case study by Louvre Abu Dhabi.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 19,
+      "title": "Keynote by Mo Gawdat - The Challenges on Our Way to AI Abundance.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Mo Gawdat",
+      "title_status": "found",
+      "names": [
+        "Mo Gawdat"
+      ]
+    },
+    {
+      "reference": 20,
+      "title": "Culture Summit 2021 Opening Panel_ Shaping Policies for the Future of Culture & Creative Industries.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 21,
+      "title": "Keynote by HE Sheikh Nahyan bin Mubarak Al Nahyan",
+      "existing_speaker": "",
+      "old_title_name": "HE Sheikh Nahyan bin Mubarak Al Nahyan",
+      "title_status": "found",
+      "names": [
+        "HE Sheikh Nahyan bin Mubarak Al Nahyan"
+      ]
+    },
+    {
+      "reference": 22,
+      "title": "Keynote by HE Mohammed Al Murr _ كلمة رئيسية يلقيها معالي محمد المر.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Mohammed Al Murr",
+      "title_status": "found",
+      "names": [
+        "HE Mohammed Al Murr"
+      ]
+    },
+    {
+      "reference": 23,
+      "title": "Keynote by HE Noura Al Kaabi _ كلمة رئيسية لمعالي نورة الكعبي.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Noura Al Kaabi",
+      "title_status": "found",
+      "names": [
+        "HE Noura Al Kaabi"
+      ]
+    },
+    {
+      "reference": 24,
+      "title": "MONDIACULT Ministerial Dialogue - Time to Act_ Culture Goal post-2030.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 25,
+      "title": "Rita Wilson’s Liner Notes Featuring the Names Behind the Hits.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Rita Wilson"
+      ]
+    },
+    {
+      "reference": 26,
+      "title": "Creative Conversations_ Ai Da in conversation with Tim Marlow _ تيم مارلو في حوار مع الروبوت »آي-دا«.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Ai Da",
+        "Tim Marlow"
+      ]
+    },
+    {
+      "reference": 27,
+      "title": "Making the Local_ How Can Arts Institutions Become Urgent for Their Communities_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 28,
+      "title": "Creative Conversation with Wayne McGregor CBE _ حوارات إبداعية مع واين ماكغريغور.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Wayne McGregor CBE",
+      "title_status": "found",
+      "names": [
+        "Wayne McGregor CBE"
+      ]
+    },
+    {
+      "reference": 29,
+      "title": "Keynote by HE Anwar Gargash _ كلمة رئيسية لمعالي الدكتور أنور محمد قرقاش.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Anwar Gargash",
+      "title_status": "found",
+      "names": [
+        "HE Anwar Gargash"
+      ]
+    },
+    {
+      "reference": 30,
+      "title": "Creative Conversations_ Eddie Opara and Huda AbiFares in conversation with Sumitra Upham.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Eddie Opara",
+        "Huda AbiFares",
+        "Sumitra Upham"
+      ]
+    },
+    {
+      "reference": 31,
+      "title": "Can we debate freedom of expression_",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 32,
+      "title": "How can museums activate the past in our present_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 33,
+      "title": "Artist Talk_ BAIT١٥ - Serving the Community.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "ambiguous",
+      "names": []
+    },
+    {
+      "reference": 34,
+      "title": "The democratisation of information and its influence on culture over time.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 35,
+      "title": "Keynote by HE Zaki Anwar Nusseibeh _ كلمة رئيسية يلقيها معالي زكي أنور نسيبة.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Zaki Anwar Nusseibeh",
+      "title_status": "found",
+      "names": [
+        "HE Zaki Anwar Nusseibeh"
+      ]
+    },
+    {
+      "reference": 36,
+      "title": "Art, Data, and the Imagination_ A Creative Conversation with Refik Anadol and Ralph Nauta.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Refik Anadol",
+        "Ralph Nauta"
+      ]
+    },
+    {
+      "reference": 37,
+      "title": "East African Design Futures _ مستقبل التصميم الشرق إفريقي.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 38,
+      "title": "What is the role of heritage in post crisis recovery and reconstruction_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 39,
+      "title": "Keynote by Prof. Homi Bhabha _ كلمة رئيسية يلقيها البروفسور هومي بهابها",
+      "existing_speaker": "",
+      "old_title_name": "Prof. Homi Bhabha",
+      "title_status": "found",
+      "names": [
+        "Prof. Homi Bhabha"
+      ]
+    },
+    {
+      "reference": 40,
+      "title": "Wrap up and Closing Panel _ الندوة الحوارية الختامية.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 41,
+      "title": "Sumayya Vally in conversation with Tim Marlow _ سمية فالي في حوار مع تيم مارلو.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Sumayya Vally",
+        "Tim Marlow"
+      ]
+    },
+    {
+      "reference": 42,
+      "title": "Creative conversation with Kader Attia _ حوارات إبداعية مع قادر عطية.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Kader Attia",
+      "title_status": "found",
+      "names": [
+        "Kader Attia"
+      ]
+    },
+    {
+      "reference": 43,
+      "title": "Museums and the Perception of Time _ المتاحف والتقاط الزمن.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 44,
+      "title": "Reckoning with Globalism.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 45,
+      "title": "Keynote by HE Razan Al Mubarak _ كلمة رئيسية تلقيها سعادة رزان المبارك.mp4",
+      "existing_speaker": "",
+      "old_title_name": "HE Razan Al Mubarak",
+      "title_status": "found",
+      "names": [
+        "HE Razan Al Mubarak"
+      ]
+    },
+    {
+      "reference": 46,
+      "title": "MONDIACULT Ministerial Dialogue  The Culture of Humanity in the Digital Era.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 47,
+      "title": "Creative Conversation with Michael Uslan and David Uslan _ حوارات إبداعية مع ميشال وديفيد أوسلان.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Michael Uslan",
+        "David Uslan"
+      ]
+    },
+    {
+      "reference": 48,
+      "title": "Keynote by H.E. Sheikh Salem bin Khalid Al Qassimi.mp4",
+      "existing_speaker": "",
+      "old_title_name": "H.E. Sheikh Salem bin Khalid Al Qassimi",
+      "title_status": "found",
+      "names": [
+        "H.E. Sheikh Salem bin Khalid Al Qassimi"
+      ]
+    },
+    {
+      "reference": 49,
+      "title": "Sustainability and decision-making _ الاستدامة وصنع القرار.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 50,
+      "title": "How can museums creatively embrace the digital age_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 51,
+      "title": "Creative conversation with Sarah Morris _ حوارات إبداعية مع سارة موريس.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Sarah Morris",
+      "title_status": "found",
+      "names": [
+        "Sarah Morris"
+      ]
+    },
+    {
+      "reference": 52,
+      "title": "Deep Time _ وقت عميق.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 53,
+      "title": "Creative conversation with David Henry Hwang and Rana Kazkaz.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "David Henry Hwang",
+        "Rana Kazkaz"
+      ]
+    },
+    {
+      "reference": 54,
+      "title": "Real and Imagined Histories and Futures _ تاريخيات ومستقبليات حقيقية ومتخيلة.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 55,
+      "title": "Keynote conversation with Babyface _ محادثة رئيسية مع بيبيفيس.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Babyface",
+      "title_status": "found",
+      "names": [
+        "Babyface"
+      ]
+    },
+    {
+      "reference": 56,
+      "title": "Keynote by Eyal Weizman _ كلمة رئيسية لإيال وايزمان.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Eyal Weizman",
+      "title_status": "found",
+      "names": [
+        "Eyal Weizman"
+      ]
+    },
+    {
+      "reference": 57,
+      "title": "Keynote by Glenn D. Lowry - Imagining Museums in a Post Human World_ Notes from the Field.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Glenn D. Lowry",
+      "title_status": "found",
+      "names": [
+        "Glenn D. Lowry"
+      ]
+    },
+    {
+      "reference": 58,
+      "title": "AI Revolution_ Redefining Creativity in the Age of Machines _ إعادة تعريف الإبداع في عصر الآلات.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 59,
+      "title": "Keynote by Elvira Dyangani Ose - The Possible Museum _ كلمة رئيسية_ إلفيرا ديانغاني - المتحف الممكن.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Elvira Dyangani Ose",
+      "title_status": "found",
+      "names": [
+        "Elvira Dyangani Ose"
+      ]
+    },
+    {
+      "reference": 60,
+      "title": "How to channel funding towards culture in post-crisis situations_.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 61,
+      "title": "The Clock is Ticking_ Leading Public Agencies for Culture in Times of Polycrisis - IFACCA.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 62,
+      "title": "First People_s Knowledge on Living in the everywhen _ معرفة الشعوب الأولى في العيش في كل زمان.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 63,
+      "title": "The Power of Cultural Districts _ قوة المناطق الثقافية.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 64,
+      "title": "Artist Talk_ Jatiwangi Art Factory with X Zhu-Nowel.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "ambiguous",
+      "names": []
+    },
+    {
+      "reference": 65,
+      "title": "A Keynote Erica Muhl _ حوار رئيسي إيريكا موهل.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Erica Muhl",
+      "title_status": "found",
+      "names": [
+        "Erica Muhl"
+      ]
+    },
+    {
+      "reference": 66,
+      "title": "The future of movie theatres in a streaming society _ مستقبل مسارح الأفلام في مجتمعات البث المباشر.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 67,
+      "title": "The New Canon _ آلة القانون الجديدة.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 68,
+      "title": "Keynote_ Creative Intervention.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 69,
+      "title": "Building forever_ The new art of sharing _ البناء للبقاء؟ فن الشراكة الجديد.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 70,
+      "title": "Cultural leadership in our complex world _ الريادة الثقافية في عالمنا المعقد.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 71,
+      "title": "Panos A  Panay in conversation with Jimmy Jam _ بانوس إ. باناي في حوار مع جيمي جام.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Panos A Panay",
+        "Jimmy Jam"
+      ]
+    },
+    {
+      "reference": 72,
+      "title": "Creating a Richer Chorus _ بناء جوقات أكثر ثراء.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 73,
+      "title": "People and Place _ الناس والمكان.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 74,
+      "title": "Keynote by H.E. Ali bin Tamim _ كلمة رئيسية_ معالي علي بن تمتم.mp4",
+      "existing_speaker": "",
+      "old_title_name": "H.E. Ali bin Tamim",
+      "title_status": "found",
+      "names": [
+        "H.E. Ali bin Tamim"
+      ]
+    },
+    {
+      "reference": 75,
+      "title": "Culture as a Public Good  From Policy to Action.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 76,
+      "title": "Ministerial Dialogue_ Shaping the Future of Arts Education.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 77,
+      "title": "Mentoring for Impact _ الإرشاد الفني لأجل الأثر.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 78,
+      "title": "Integrating Cultural Diversity Through Music _ الموسيقى أداة لتعزيز التنوع الثقافي.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 79,
+      "title": "Creative Conversations_ Tatiana Bilbao and Asif Khan in conversation with Tim Marlow.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "found",
+      "names": [
+        "Tatiana Bilbao",
+        "Asif Khan",
+        "Tim Marlow"
+      ]
+    },
+    {
+      "reference": 80,
+      "title": "Creative Conversation with Colleen Atwood _ حوار إبداعي مع كولين أتوود.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Colleen Atwood",
+      "title_status": "found",
+      "names": [
+        "Colleen Atwood"
+      ]
+    },
+    {
+      "reference": 81,
+      "title": "The role of Culture in making Resilient and Shared Societies.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 82,
+      "title": "The Role of Culture in Shaping Global Governance _ دور الثقافة في تشكيل الحوكمة العالمية",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 83,
+      "title": "Growing Local Creator Economics _ نمو الإقتصاد الإبداعي المحلي.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 84,
+      "title": "Redefining the Role of a Collector _ إعادة تعريف دور مقتني الأعمال الفنية.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 85,
+      "title": "How Global Cities are Changing Arts Institutions _ كيف تغيّر المدن العالمية مؤسسات الفنون.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 86,
+      "title": "Keynote by Harvey Mason jr _ كلمة رئيسية لماسون هارفي جونبير",
+      "existing_speaker": "",
+      "old_title_name": "Harvey Mason jr",
+      "title_status": "found",
+      "names": [
+        "Harvey Mason jr"
+      ]
+    },
+    {
+      "reference": 87,
+      "title": "Borderless Creativity _ الإبتكار بلا حدود.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 88,
+      "title": "Hollywood and the Diversity of Cultural Expression _ هوليود وتنوع التعبير الثقافي.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 89,
+      "title": "Creative Conversation with Thomas Heatherwick _ محادثة إبداعية مع توماس هيثرويك.mp4",
+      "existing_speaker": "",
+      "old_title_name": "Thomas Heatherwick",
+      "title_status": "found",
+      "names": [
+        "Thomas Heatherwick"
+      ]
+    },
+    {
+      "reference": 90,
+      "title": "A Conversation_ About Jazz, Humanity and Beyond.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 91,
+      "title": "Creative Expression at a Time of Disruption _ التعبير الإبداعي في زمن عدم الوضوح",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 92,
+      "title": "Taking Bollywood Global _ إشهار بوليوود عالميا ً_ الدينامية والتنوع.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    },
+    {
+      "reference": 93,
+      "title": "Community and Practice _ المجتمع والتجربة.mp4",
+      "existing_speaker": "",
+      "old_title_name": "",
+      "title_status": "not_found",
+      "names": []
+    }
+  ]
+}

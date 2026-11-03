@@ -1,4 +1,4 @@
-"""Deterministic main-speaker proposals: video title, CSV caption, then DOCX.
+"""Deterministic speaker proposals: video title, CSV caption, then DOCX.
 
 No network/model calls or source-file writes. Ambiguous participation stays blank.
 """
@@ -30,10 +30,14 @@ NOT_NAMES = frozenset((
 ).split())
 WORD = re.compile(r"[^\W\d_]+(?:[’'\-.][^\W\d_]+)*\.?\Z", re.UNICODE)
 TITLE_PREFIX = re.compile(
-    r"^(?:keynote(?:\s+(?:address|speech|conversation))?\s+(?:by|with)\s+|"
-    r"(?:creative\s+)?conversations?\s+with\s+|artist\s+talk\s*[:_]\s*|"
-    r"keynote\s+conversations?\s*[:_]\s*|a\s+keynote\s+(?:by\s+)?)", re.I
+    r"\b(?:keynote(?:\s+(?:address|speech|conversation))?\s+(?:by|with)\s+|"
+    r"(?:a\s+)?(?:creative\s+)?conversations?\s+with\s+|"
+    r"(?:creative\s+conversations?|keynote\s+conversations?|artist\s+talk|"
+    r"screening\s*\+\s*conversation)\s*[:_]\s*|a\s+keynote\s+(?:by\s+)?)", re.I
 )
+TITLE_CONVERSATION = re.compile(r"\s+in\s+conversation\s+with\s+", re.I)
+TITLE_NAMES = re.compile(r"\s+in\s+conversation\s+with\s+|\s+(?:and|with)\s+|\s*&\s*|\s*[,;]\s*", re.I)
+TITLE_END = re.compile(r"\s+[_|]\s+|\s+[–—-]\s+|[–—]|-(?=(?:creative|the|a|an)\b)|:", re.I)
 SELF_INTRO = re.compile(r"\b(?:my\s+name\s+is|I\s+am|I'm|I’m)\s*[,;:]?\s+", re.I)
 TIMESTAMP = re.compile(r"^\s*\[(\d{2}):(\d{2}):(\d{2})\]\s*")
 SPEAKER_LABEL = re.compile(r"^\s*Speaker\s+([0-9]+)\s*:\s*", re.I)
@@ -53,6 +57,11 @@ class Detection:
     paragraph: int | None = None
     timestamp: str = ""
     speaker_label: str = ""
+
+    @property
+    def names(self) -> tuple[str, ...]:
+        """Names in the automatic semicolon format; never split existing CSV cells."""
+        return tuple(name.strip() for name in self.name.split(";") if name.strip())
 
 
 @dataclass(frozen=True)
@@ -94,7 +103,7 @@ def _without_fillers(text: str) -> str:
     return re.sub(r"[,;]\s*(?:uh|um|er|ah)\s*[,;]\s*", " ", text, flags=re.I)
 
 
-def _name_prefix(text: str, *, mononym: bool = False) -> str:
+def _name_prefix(text: str, *, mononym: bool = False, initials: bool = False) -> str:
     segment = re.split(r"[,;:\n|]|\s+[–—-]\s+", text, maxsplit=1)[0].strip()
     if "?" in segment or "\ufffd" in segment:
         return ""
@@ -104,7 +113,8 @@ def _name_prefix(text: str, *, mononym: bool = False) -> str:
     for raw in segment.split():
         token = raw.strip('"“”‘’()[]')
         lower = token.casefold()
-        if lower in NOT_NAMES - HONORIFICS or lower in {"and", "with", "in", "from", "who", "will"}:
+        middle_initial = initials and bool(parts) and len(token) == 1 and token.isupper()
+        if (lower in NOT_NAMES - HONORIFICS and not middle_initial) or lower in {"and", "with", "in", "from", "who", "will"}:
             break
         if not WORD.fullmatch(token) and lower not in HONORIFICS:
             break
@@ -153,23 +163,40 @@ def _selection(source: str, candidates, *, ambiguous: bool = False) -> Detection
 
 
 def extract_title(text: str) -> Detection:
-    """Recognize an explicitly attributed single-person title, without fallback."""
+    """Extract explicitly named title participants, keeping their source order."""
     source = "video_title"
     if text.strip().casefold() in UNAVAILABLE:
         return Detection(source, "unavailable", reason="The video title is empty.")
     title = _normalized(re.sub(r"\.(?:mp4|mov|mkv|webm|avi)\s*$", "", text, flags=re.I))
-    title = re.split(r"\s+[_|]\s+", title, maxsplit=1)[0]
-    prefix = TITLE_PREFIX.match(title)
+    prefix = TITLE_PREFIX.search(title)
+    if prefix and re.search(r"\bin\s+$", title[:prefix.start()], re.I):
+        prefix = None  # Keep both sides of an unprefixed "A in conversation with B".
+    mononym = bool(prefix)
     if prefix:
         attributed = title[prefix.end():]
-    elif re.match(r"^(?:Sir|Dame|Dr\.?|Prof\.?|H\.?E\.?|Sheikh|Sheikha)\s+", title, re.I):
+    elif TITLE_CONVERSATION.search(title):
         attributed = title
     else:
-        return Detection(source, "not_found", reason="The title does not explicitly identify a main speaker.")
-    if _multiple_names(attributed):
-        return Detection(source, "ambiguous", reason="A conversation title names multiple people without a unique main role.")
-    name = _name_prefix(attributed, mononym=bool(prefix))
-    return _selection(source, [(name, text)] if name else [], ambiguous=not bool(name))
+        owner = re.match(r"^(.+?)[’']s\s+liner\s+notes\b", title, re.I)
+        if owner:
+            attributed = owner[1]
+        elif re.match(r"^(?:Sir|Dame|Dr\.?|Prof\.?|H\.?E\.?|Sheikh|Sheikha)\s+", title, re.I):
+            attributed = title
+        else:
+            return Detection(source, "not_found", reason="The title does not explicitly identify speaker names.")
+    attributed = TITLE_END.split(attributed, maxsplit=1)[0].strip()
+    names = {}
+    for fragment in TITLE_NAMES.split(attributed):
+        fragment = fragment.strip().strip('"“”‘’()[]')
+        name = _name_prefix(fragment, mononym=mononym, initials=True)
+        # Do not turn an organization, damaged name, topic, or incomplete list
+        # into a partial personal name merely because its prefix looks valid.
+        if not name or name != fragment:
+            return Detection(source, "ambiguous", reason="A title participant is not a complete supported person name.")
+        names.setdefault(name.casefold(), name)
+    if not names:
+        return Detection(source, "not_found", reason="The title contains no supported person names.")
+    return Detection(source, "found", "; ".join(names.values()), text)
 
 
 def extract_caption(text: str) -> Detection:

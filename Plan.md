@@ -14,7 +14,7 @@ Deliver two stages:
 
 **As soon as a source successfully identifies the main speaker, fill `Speakers` and stop processing that row. Do not analyze lower-priority sources to verify, enrich, or add names after success.** If all three sources fail, leave the blank speaker cell blank.
 
-Only main speakers belong in `Speakers`. Do not automatically include moderators, announcers, interviewers, panel guests, or people merely mentioned. A person must be supported as the main speaker, rather than accepted just because their name appears first or they introduce themselves.
+Updated title policy, confirmed 3 November 2026: `Speakers` can contain all explicitly named title participants, including conversation partners or a title-named host. Preserve their order and join names with `; `. Ref 26 includes both Ai Da and Tim Marlow; Ref 42 is Kader Attia. For caption/transcript fallback, the existing main-speaker role checks remain: do not select a moderator or introducer simply because they appear first or introduce themselves.
 
 Keep the current concise interface and search-index-based social finder. The reverted Playwright experiment is outside this plan. No automatic searches of all imported names are included.
 
@@ -67,9 +67,9 @@ Each source extractor returns one of four internal outcomes:
 | Ambiguous | Names appear, but the main speaker cannot be established | Continue to the next source; do not fill with the first name or a complete attendee list. |
 | Unavailable | Source is blank, a placeholder, missing, or unreadable | Continue to the next source. |
 
-A successful detection needs both the person's name and sufficient evidence that this person is the main speaker. A damaged name, first name without adequate identification, institution, moderator, or unrelated mention does not qualify.
+Title success requires complete names explicitly attributed to the talk or conversation. More than one title participant is allowed under the updated policy. Caption/transcript success still requires evidence of the main-speaker role. Damaged or incomplete names, institutions, and unrelated mentions remain unresolved.
 
-The default is one identifiable main speaker per talk. If a panel or conversation has several plausible speakers with no clearly identified main speaker, continue through the cascade and leave the cell blank if the ambiguity persists. Do not silently select the first listed panelist or concatenate everyone. An explicit co-main-speaker exception would require a separate decision.
+Explicitly named title participants are now a confirmed exception to the original single-main-speaker policy. A title can end processing with several names. For fallback captions or transcripts, a participant list without an identifiable main role still remains unresolved; do not choose its first panelist arbitrarily.
 
 The CSV is parsed once, so its caption text may already be in memory. Early stopping means the caption extractor is not called after a title succeeds, and the transcript is not indexed/read for that row after either earlier source succeeds.
 
@@ -79,7 +79,7 @@ Analyze only the current row's `High-res video name`, using a temporary normaliz
 
 Consider strong formats such as `Keynote by [name]`, `Artist Talk: [name]`, and clearly person-named talks. Recognize Unicode names, accents, initials, apostrophes, hyphens, long Arabic names, honorifics, and explicit professional mononyms.
 
-A conversation title containing two names is not automatically a successful main-speaker detection. The format must establish a featured/main speaker. Do not assume that every name after `with` is a main speaker or that every capitalized phrase is a person.
+Recognize explicit multi-person title formats with `&`, `and`, `with`, and `in conversation with`, including a conversation attribution after an initial topic. Preserve name hyphens while excluding trailing topics and video extensions. Recognize a named owner in `[Name]'s Liner Notes`. Do not treat generic capitalized topics or organizations as people. Successful multiple names use `Name One; Name Two` in the CSV and retain individual names via `Detection.names`.
 
 An institution-only title such as `A case study by Louvre Abu Dhabi`, damaged text such as `Andra?s Sza?nto?`, or unresolved role ambiguity proceeds to **YouTube Caption**, not directly to the transcript.
 
@@ -123,7 +123,7 @@ On success, fill the proposed speaker and retain the file, timestamp/paragraph, 
 | Ref 5: damaged title name; caption is `No description`; transcript has Alexandra Munroe introducing András Szántó as the person giving the talk | Use the transcript to identify András Szántó. Do not select the introducer just because she introduces herself first. |
 | Ref 18: institution-only title; caption is `No description`; transcript starts with Manuel Rabaté presenting the Louvre Abu Dhabi case study | Reject the institution as a person and use the main presenter's transcript evidence. |
 | Ref 27: caption says `Moderated by Alexandra Munroe` and lists four people under `Speakers:` | Do not fill Alexandra as the main speaker or select the first panelist. Continue to the transcript; leave blank if it still provides no identifiable main speaker. |
-| Ref 9: title contains two people, while transcript includes a differently transcribed self-introduction | Determine the main role through the ordered sources. Do not fill both people or resolve spelling/identity from general knowledge. |
+| Ref 9: title explicitly names Christopher Kulendran Thomas with X Zhu-Nowell | Retain both title names in order and stop; no transcript spelling correction or external identity completion. |
 | Ref 32: caption does not establish a main speaker; transcript welcomes only `Alexandra` and thanks `Mohammed` | Do not invent surnames. Leave blank if the permitted transcript window cannot identify the main speaker adequately. |
 
 ### 3.7 Review and completed CSV
@@ -152,19 +152,21 @@ The rule-only path should work without an API key. Provider choice, credentials,
 
 ## 5. Stage 2 — reviewed main speaker to social search
 
-- Select an eligible talk with an accepted main-speaker name.
+- Select an eligible talk, then one reviewed name if its title provided multiple participants.
 - Use `Use in social search` to prefill the existing Full Name field.
 - Keep the user's platform selection and require an explicit `Search` click.
 - Preserve LinkedIn-only profession/company inputs and extraction; Instagram and X remain focused on names, followers, and reference links.
 - Preserve follower sorting, social CSV export, and the current concise interface.
 
-Keep a structured main-speaker record separately from the CSV cell, with source row, reference, accepted name, winning source, and evidence. Existing cells may include aliases, job titles, or organizations; do not pass the entire cell blindly into the search name or split it automatically on commas.
+Keep individual reviewed speaker records separately from the CSV cell, with source row, reference, accepted name, winning source, and evidence. Existing cells may include aliases, job titles, or organizations; do not pass the entire cell blindly into the search name or split it automatically on commas.
 
 Group exact normalized duplicate names only for search convenience while retaining every source reference; do not assume that same-name people are the same identity or merge fuzzy spellings. Preserve meaningful name particles such as `bin` and `Al`. Transcript affiliations must not be copied into social profile facts. Transfer the reviewed name only.
 
 Automatic batch searching, background search queues, and searches for moderators/guests are outside this release.
 
 ## 6. Implementation sequence
+
+Title-rule update: all nine user feedback cases pass on the corrected UTF-8 CSV, including both participants in Ref 26. Title successes on its 89 pending rows increased from 27 to 38 under the revised policy; total proposals are 39, with 50 unresolved. All 162 focused tests passed. See [validation/speaker-titles.md](validation/speaker-titles.md). Earlier milestone counts below are historical runs.
 
 Milestone 1 is implemented and verified: 36 focused tests passed; the supplied data preserved 254 rows/21 columns, identified 93 eligible talks (89 pending, four prefilled), and matched all 93 DOCX files without reading their bodies. See [validation/speaker-import.md](validation/speaker-import.md). The importer and extractor now feed the milestone 3 Speakers workspace.
 
@@ -197,7 +199,7 @@ Required checks:
 - `No description` or a missing caption: proceed to transcript only after title failure.
 - Both earlier sources fail: exact reference matching reaches the correct DOCX.
 - All three sources fail or remain ambiguous: the blank speaker cell stays blank.
-- A moderator, announcer, institution, acknowledgment, or unrelated mention is not accepted as the main speaker.
+- Caption/transcript fallback does not accept an announcer, moderator, institution, acknowledgment, or unrelated mention as the main speaker. Explicit title-named participants follow the updated multi-name policy.
 - A multi-person `Speakers:` list is not arbitrarily reduced to its first person.
 - No `YouTube title`, external search, or cross-document identity completion is introduced as an extra source.
 - All 161 out-of-scope rows, four existing speaker cells, and original columns are preserved by default.
@@ -210,6 +212,6 @@ Required checks:
 
 Scope, role, source order, and stopping behavior are settled and should not be reopened as defaults. The remaining design choice is whether to add optional LLM assistance immediately or evaluate the deterministic baseline first; the recommendation remains baseline first.
 
-For panels without an identifiable main speaker, the default is unresolved/blank with manual review. Supporting explicitly co-main speakers would be a separate extension rather than an automatic participant list.
+Explicit title participants can now fill multiple names. Caption/transcript panels without an identifiable main speaker remain unresolved/blank for review; this change does not enable indiscriminate extraction of everyone mentioned in prose.
 
 Milestones 1–3 are complete. The next milestone is an explicit handoff of a reviewed main-speaker name to the social search form. Prefilling must retain platform choices and must not trigger a search automatically.

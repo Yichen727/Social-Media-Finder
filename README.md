@@ -1,6 +1,6 @@
 # Social Media Finder
 
-Find public profiles on **LinkedIn, Instagram, and X**, compare follower counts, and export results to CSV. Use **Speakers** to fill and review main-speaker names in a content CSV. No API key or social-platform login is required.
+Find public profiles on **LinkedIn, Instagram, and X**, compare follower counts, and export results to CSV. Use **Speakers** to fill and review speaker names in a content CSV. No API key or social-platform login is required.
 
 ## Start
 
@@ -36,7 +36,7 @@ If a search fails, wait briefly and use **Refresh Search**, or try another spell
 
 1. Choose **Speakers** and upload your content CSV.
 2. Optionally enter the **Transcript folder** path on the computer running the app. Extract your transcript ZIP first.
-3. Click **Find speakers**. Only talks numbered 1–93 are processed, using **High-res video name → YouTube Caption → DOCX opening**, stopping at the first supported main speaker. Uncertain names stay blank.
+3. Click **Find speakers**. Only talks numbered 1–93 are processed, using **High-res video name → YouTube Caption → DOCX opening**, stopping at the first successful source. Explicit title participants are kept in title order, separated by `; ` when there are several. Uncertain names stay blank.
 4. Edit or clear **Speakers** in the table. Open **Source evidence** to check a suggestion.
 5. Click **Apply reviewed changes**, then **Download completed CSV**. Later edits require approval again.
 

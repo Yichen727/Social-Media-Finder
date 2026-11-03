@@ -115,9 +115,6 @@ def test_explicit_title_names(title, name):
     "A case study by Louvre Abu Dhabi", "Artist Talk_ Jatiwangi Art Factory",
     "Artist Talk: Creative Community", "Keynote Conversations_ Andra?s Sza?nto? - Museum",
     "Future Museums", "Keynote by Senior Curator", "Keynote by Speaker 78",
-    "Creative Conversation with Maja Hoffmann AND Hashim Sarkis",
-    "Creative Conversation with Maja Hoffmann & Hashim Sarkis",
-    "Creative Conversation with Ai Da in conversation with Tim Marlow",
 ])
 def test_unsupported_titles_do_not_choose_a_person(title):
     assert extract_title(title).status != "found"

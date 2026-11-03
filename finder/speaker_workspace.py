@@ -49,7 +49,7 @@ def _evidence(review: SpeakerReview, generation: int):
 
 def render_speaker_workspace():
     state = st.session_state.setdefault("speaker_workspace", {})
-    st.caption("Fill main speakers for numbered talks, review names, and download your CSV.")
+    st.caption("Fill speakers for numbered talks, review names, and download your CSV.")
     uploaded = st.file_uploader("Content CSV", type=["csv"], key="speaker_csv", on_change=_forget_removed_upload)
     st.session_state.setdefault("speaker_folder", state.get("folder", ""))
     folder = st.text_input("Transcript folder", key="speaker_folder",
@@ -123,13 +123,13 @@ def render_speaker_workspace():
             if path is not None and not path.is_dir():
                 raise ValueError("Transcript folder is not accessible. Choose a local folder or leave it blank to use CSV sources only.")
             extractor_key = str(path.resolve()) if path else ""
-            if state.get("extractor_key") != extractor_key or "extractor" not in state:
+            if state.get("extractor_key") != extractor_key or not isinstance(state.get("extractor"), SpeakerExtractor):
                 state["extractor"] = SpeakerExtractor(TranscriptIndex(path) if path else None)
                 state["extractor_key"] = extractor_key
             extractor = state["extractor"]
             if extractor.transcripts:
                 extractor.transcripts.refresh()
-            with st.spinner("Finding main speakers…"):
+            with st.spinner("Finding speakers…"):
                 review.offer(extractor.extract_all(review.table))
             state["generation"] += 1
             st.rerun()
