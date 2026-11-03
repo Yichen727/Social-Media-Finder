@@ -1,0 +1,211 @@
+# Speaker Extraction and Social Search — Development Plan
+
+Status: milestone 1 completed, 3 November 2026. CSV import, row eligibility, and lazy transcript matching are implemented. Speaker extraction, UI integration, and social-search handoff remain planned. The supplied CSV/DOCX files are unchanged.
+
+## 1. Confirmed requirements
+
+Deliver two stages:
+
+1. Detect and fill the **main speaker** for the **93 numbered talks**. Use the following sources in this exact order:
+   1. The row's `High-res video name`.
+   2. The same row's `YouTube Caption`.
+   3. Opening paragraphs of the matching DOCX in the transcript folder.
+2. Transfer a reviewed main speaker's name into the existing social search form. The user chooses platforms and starts the search.
+
+**As soon as a source successfully identifies the main speaker, fill `Speakers` and stop processing that row. Do not analyze lower-priority sources to verify, enrich, or add names after success.** If all three sources fail, leave the blank speaker cell blank.
+
+Only main speakers belong in `Speakers`. Do not automatically include moderators, announcers, interviewers, panel guests, or people merely mentioned. A person must be supported as the main speaker, rather than accepted just because their name appears first or they introduce themselves.
+
+Keep the current concise interface and search-index-based social finder. The reverted Playwright experiment is outside this plan. No automatic searches of all imported names are included.
+
+## 2. Findings from the supplied files
+
+Inspected read-only:
+
+- `NEW Culture Summit High Resolution Content with Views and Metrics(Mapped Content).csv`
+- `TRANSCRIPTS V2.zip`
+
+| Item | Observed result | Planned handling |
+| --- | --- | --- |
+| CSV size | 254 data rows, 21 columns | Preserve every original row and column in the completed CSV. |
+| In-scope talks | 93 rows with unique numeric `Ref Number` values 1–93 | Only these rows enter main-speaker detection. |
+| Out-of-scope rows | 160 blank references and one reference containing `YES` | Leave their speaker values and all other cells unchanged. No title-only processing of these rows. |
+| Speaker field | Existing header is `Speakers`, plural | Reuse it rather than adding a duplicate `Speaker` column. |
+| Existing values | References 1–4 have speaker text | Retain the previous fill-blanks-only default: preserve those four cells; process the 89 numbered blank cells unless the user explicitly clears an existing value. |
+| Caption content | All 93 numbered rows have a caption cell, but 49 contain `No description` | Treat placeholders as unavailable content; the other 44 cells are potential sources, not guaranteed successful detections. |
+| Transcripts | 93 numbered DOCX files | Every valid reference has exactly one matching DOCX in this sample. |
+| Encoding | UTF-8 decoding failed; Windows-1252 decoding succeeded | Support an encoding preview/selection and export as UTF-8 with BOM. |
+| Damaged text | Some video-title names contain literal `?` | Do not reconstruct missing letters by guessing; continue to the next source. |
+
+DOCX files use descriptive names such as `05. Keynote Conversations_ ...docx`. Also support an explicit numbered parent folder containing `transcript.docx`. Do not assume every file is literally called `transcript.docx`.
+
+These observations describe the input structure. No extraction accuracy rate or completed CSV is claimed.
+
+## 3. Stage 1 — import and strictly ordered extraction
+
+### 3.1 Import and row eligibility
+
+Add a compact `Speakers` workspace with CSV upload, transcript folder path, `Find speakers`, editable preview, and `Download completed CSV`.
+
+- Locate `Ref Number`, `High-res video name`, `YouTube Caption`, and `Speakers` using case/whitespace-tolerant header lookup. Preserve original header spelling/order on export.
+- Accept an existing `Speaker` header as an alternative. Add `Speakers` only when neither exists; if both exist, let the user choose the target column.
+- Keep cell values as strings to preserve blanks, identifiers, URLs, and leading zeroes. Validate encoding, delimiter, and row structure.
+- Only valid numbered talk rows are eligible. Preserve the original source row identity separately from `Ref Number` so rows cannot be merged or overwritten accidentally.
+- Preserve existing nonblank speaker cells by default. Existing spelling, aliases, and role text are not silently rewritten.
+- Missing/blank source fields are unavailable stages, not permission to invent values or fetch additional data from the web.
+
+The initial release does not fill unnumbered rows, infer a replacement for `YES`, or search outside the three agreed sources. `YouTube title` is not an additional fallback or corroboration source.
+
+### 3.2 Success contract and stopping rule
+
+Each source extractor returns one of four internal outcomes:
+
+| Outcome | Meaning | Next action |
+| --- | --- | --- |
+| Found | A supported, usable name is attributable to the main speaker | Propose the name in `Speakers` and stop this row immediately. |
+| Not found | No main-speaker name was found | Continue to the next source. |
+| Ambiguous | Names appear, but the main speaker cannot be established | Continue to the next source; do not fill with the first name or a complete attendee list. |
+| Unavailable | Source is blank, a placeholder, missing, or unreadable | Continue to the next source. |
+
+A successful detection needs both the person's name and sufficient evidence that this person is the main speaker. A damaged name, first name without adequate identification, institution, moderator, or unrelated mention does not qualify.
+
+The default is one identifiable main speaker per talk. If a panel or conversation has several plausible speakers with no clearly identified main speaker, continue through the cascade and leave the cell blank if the ambiguity persists. Do not silently select the first listed panelist or concatenate everyone. An explicit co-main-speaker exception would require a separate decision.
+
+The CSV is parsed once, so its caption text may already be in memory. Early stopping means the caption extractor is not called after a title succeeds, and the transcript is not indexed/read for that row after either earlier source succeeds.
+
+### 3.3 Detection 1: High-res video name
+
+Analyze only the current row's `High-res video name`, using a temporary normalized copy. Preserve the original title cell.
+
+Consider strong formats such as `Keynote by [name]`, `Artist Talk: [name]`, and clearly person-named talks. Recognize Unicode names, accents, initials, apostrophes, hyphens, long Arabic names, honorifics, and explicit professional mononyms.
+
+A conversation title containing two names is not automatically a successful main-speaker detection. The format must establish a featured/main speaker. Do not assume that every name after `with` is a main speaker or that every capitalized phrase is a person.
+
+An institution-only title such as `A case study by Louvre Abu Dhabi`, damaged text such as `Andra?s Sza?nto?`, or unresolved role ambiguity proceeds to **YouTube Caption**, not directly to the transcript.
+
+If successful, set the proposed speaker and record title evidence. Do not run caption or transcript extraction afterward.
+
+### 3.4 Detection 2: YouTube Caption
+
+Run only when title detection did not succeed. Read the existing CSV cell; do not request the YouTube URL, download subtitles, or call a caption API.
+
+- Normalize whitespace for analysis while retaining the original cell value.
+- Treat `No description` and equivalent empty placeholders as unavailable.
+- Identify explicit attribution such as `Keynote by`, `Main speaker`, a clearly featured speaker, or a description assigning the talk to a named person.
+- Distinguish `Moderated by` from the main-speaker role. A `Speakers:` list containing several panelists does not, by itself, identify one main speaker.
+- Ignore channel boilerplate, organizations, promotional links, acknowledgments, and unrelated names.
+- If text is damaged or the main role remains uncertain, continue to the transcript.
+
+On success, fill the proposed speaker and keep a short evidence excerpt from `YouTube Caption`. Do not open the DOCX or perform transcript analysis afterward.
+
+### 3.5 Detection 3: matching transcript paragraphs
+
+Run only when both CSV sources failed to establish the main speaker. Lazily index the selected transcript folder on the first row that needs this stage; cache that index for later fallback rows.
+
+Match exact normalized numeric references: CSV `5` matches a `05.` filename prefix. For a generic `transcript.docx`, use an unambiguous numbered parent folder. Do not match `1` to `10`, use directory order, or assume a CSV row number is the reference.
+
+Missing/unreadable documents, conflicting file/folder references, and duplicate matches remain unresolved for review. Do not silently choose a file.
+
+Read DOCX text locally, preserving paragraph order and joining text runs. Standard-library ZIP/XML parsing is sufficient for the structure inspected so far. The first paragraph may be a title and the first spoken turn may only say `Hello`; examine opening spoken turns instead of taking the first paragraph/name mechanically.
+
+Proposed initial bounds are the first three minutes of timestamped speech and at most 8,000 characters; use a bounded paragraph window if timestamps are absent. Tune these limits against the actual sample.
+
+Look for self-introduction and explicit introduction of the featured speaker, such as `who will be giving a talk`. Distinguish a main speaker from an announcer or moderator saying `I'm ...` before introducing someone else. A diarization label such as `Speaker 78` is not an identity and must not be linked across documents.
+
+On success, fill the proposed speaker and retain the file, timestamp/paragraph, and supporting excerpt. If no main speaker can be established, leave the speaker cell blank. No fourth source, cross-document name expansion, external search, or model-memory completion follows.
+
+### 3.6 Examples from the supplied material
+
+| Example | Behavior under the confirmed rules |
+| --- | --- |
+| Clear `Keynote by [name]` in the video title | Fill the main speaker from the title; skip caption and transcript extraction. |
+| Title has no usable name; caption explicitly identifies the main speaker | Fill from the caption; do not open the transcript. |
+| Ref 5: damaged title name; caption is `No description`; transcript has Alexandra Munroe introducing András Szántó as the person giving the talk | Use the transcript to identify András Szántó. Do not select the introducer just because she introduces herself first. |
+| Ref 18: institution-only title; caption is `No description`; transcript starts with Manuel Rabaté presenting the Louvre Abu Dhabi case study | Reject the institution as a person and use the main presenter's transcript evidence. |
+| Ref 27: caption says `Moderated by Alexandra Munroe` and lists four people under `Speakers:` | Do not fill Alexandra as the main speaker or select the first panelist. Continue to the transcript; leave blank if it still provides no identifiable main speaker. |
+| Ref 9: title contains two people, while transcript includes a differently transcribed self-introduction | Determine the main role through the ordered sources. Do not fill both people or resolve spelling/identity from general knowledge. |
+| Ref 32: caption does not establish a main speaker; transcript welcomes only `Alexandra` and thanks `Mohammed` | Do not invent surnames. Leave blank if the permitted transcript window cannot identify the main speaker adequately. |
+
+### 3.7 Review and completed CSV
+
+Keep the preview concise: `Ref Number`, `High-res video name`, and editable `Speakers`. Show the winning source and supporting excerpt for a selected row on demand. Do not add visible confidence scores or repeated warning banners.
+
+Keep original and proposed values separate; allow edits and clearing proposals. Do not discard user edits when rerunning the same upload without an explicit reset.
+
+Export a new `<original-name>_speakers_filled.csv` with all 254 original rows and 21 original columns for this sample. Change only approved speaker cells among the 93 eligible numbered rows. Preserve the four prefilled values by default and all 161 out-of-scope rows. Preserve source business columns, including the source CSV's `Match status`, independently of the social table's display policy. Do not overwrite the original CSV or DOCX files.
+
+## 4. LLM position
+
+The existing recommendation remains **rules first, optional LLM assistance for difficult cases**. This is not yet a confirmed requirement to use a model.
+
+An optional LLM would help interpret names and main-speaker roles within the currently active source. It must obey the same three-step cascade:
+
+- Title success ends processing, including any later model work on captions/transcripts.
+- Caption analysis receives the current row's caption, not a combined transcript request.
+- Transcript analysis is allowed only when both earlier stages have failed.
+- Return structured names, roles, evidence quotations, and source locations; reject unsupported names or a main-speaker claim without supporting evidence.
+- Do not let source text become application instructions, invoke tools/web searches, or supply surnames from model memory.
+
+No LLM stage may read lower-priority sources after success, introduce `YouTube title` as a hidden fourth source, or turn a multi-person panel into one guessed main speaker. Invalid or inconclusive model output is a failed extraction and proceeds to the next permitted source, or stays blank after the transcript.
+
+The rule-only path should work without an API key. Provider choice, credentials, external processing, cost, and latency remain discussion items only if optional model assistance is adopted. No model calls are made during planning.
+
+## 5. Stage 2 — reviewed main speaker to social search
+
+- Select an eligible talk with an accepted main-speaker name.
+- Use `Use in social search` to prefill the existing Full Name field.
+- Keep the user's platform selection and require an explicit `Search` click.
+- Preserve LinkedIn-only profession/company inputs and extraction; Instagram and X remain focused on names, followers, and reference links.
+- Preserve follower sorting, social CSV export, and the current concise interface.
+
+Keep a structured main-speaker record separately from the CSV cell, with source row, reference, accepted name, winning source, and evidence. Existing cells may include aliases, job titles, or organizations; do not pass the entire cell blindly into the search name or split it automatically on commas.
+
+Group exact normalized duplicate names only for search convenience while retaining every source reference; do not assume that same-name people are the same identity or merge fuzzy spellings. Preserve meaningful name particles such as `bin` and `Al`. Transcript affiliations must not be copied into social profile facts. Transfer the reviewed name only.
+
+Automatic batch searching, background search queues, and searches for moderators/guests are outside this release.
+
+## 6. Implementation sequence
+
+Milestone 1 is implemented and verified: 36 focused tests passed; the supplied data preserved 254 rows/21 columns, identified 93 eligible talks (89 pending, four prefilled), and matched all 93 DOCX files without reading their bodies. See [validation/speaker-import.md](validation/speaker-import.md). The importer is a backend module; no upload UI or name-extraction behavior has been added yet.
+
+| Milestone | Proposed change | Check before moving on |
+| --- | --- | --- |
+| **1. Import and eligibility — complete** | `finder/speaker_import.py`: CSV decoding, headers, text values, row identity, valid numbered scope, and lazy transcript matching | 93 eligible talks; original 254 rows/21 columns retained; prefilled cells preserved. |
+| 2. Ordered extraction | `finder/speaker_extract.py`: separate title, caption, and transcript extractors with a shared main-speaker success contract | Title → caption → transcript order; no downstream extractor called after success. |
+| 3. Review and export | Compact Speakers workspace in `app.py`, evidence on demand, editable values, completed-CSV download | Only accepted in-scope speaker cells change. |
+| 4. Search handoff | Reviewed main-speaker record to existing search form/session state | Prefilling does not automatically trigger a network search. |
+| 5. Optional model evaluation | Separate model adapter only if adopted after baseline evaluation | Main-speaker accuracy improves while preserving evidence validation and early stopping. |
+
+Store the table, proposals, edits, and lazily built transcript index in session state. Cache DOCX opening text by file identity/content and invalidate when a file changes. Sorting the preview must not rerun extraction. Skipped sources must not trigger unnecessary document reads or model calls.
+
+The folder path is local to the machine running Streamlit. Extract `TRANSCRIPTS V2.zip` before using it. ZIP upload and remote-machine folder access remain outside the first version.
+
+## 7. Acceptance and evaluation
+
+Review a representative sample of about 20 talks before claiming extraction quality, covering all three winning sources, placeholders, damaged names, institutions, introducers, moderators, ambiguous panels, and missing names. Review the 93 numbered talks for production acceptance.
+
+Measure correctly accepted main speakers, incorrect fills, unresolved rows, and source usage separately. No accuracy percentage is available yet. Completing more cells is not a substitute for identifying the correct main speaker.
+
+Required checks:
+
+- Title success: caption extractor and transcript indexing/reading are not called.
+- Title failure plus caption success: transcript is not read.
+- `No description` or a missing caption: proceed to transcript only after title failure.
+- Both earlier sources fail: exact reference matching reaches the correct DOCX.
+- All three sources fail or remain ambiguous: the blank speaker cell stays blank.
+- A moderator, announcer, institution, acknowledgment, or unrelated mention is not accepted as the main speaker.
+- A multi-person `Speakers:` list is not arbitrarily reduced to its first person.
+- No `YouTube title`, external search, or cross-document identity completion is introduced as an extra source.
+- All 161 out-of-scope rows, four existing speaker cells, and original columns are preserved by default.
+- Numeric references handle `5`/`05`, avoid `1`/`10` collisions, and expose duplicate/missing matches without silently selecting a file.
+- Unicode names and CSV quoting/multiline fields round-trip correctly.
+- Rule-only extraction makes no network requests and never writes source files.
+- A reviewed main speaker reaches the search form without importing unrelated affiliations or changing existing social search behavior.
+
+## 8. Remaining discussion
+
+Scope, role, source order, and stopping behavior are settled and should not be reopened as defaults. The remaining design choice is whether to add optional LLM assistance immediately or evaluate the deterministic baseline first; the recommendation remains baseline first.
+
+For panels without an identifiable main speaker, the default is unresolved/blank with manual review. Supporting explicitly co-main speakers would be a separate extension rather than an automatic participant list.
+
+Milestone 1 is complete. The next milestone is the deterministic main-speaker extractor using the confirmed title → YouTube Caption → transcript cascade. UI review and social-search handoff follow in their own milestones.
