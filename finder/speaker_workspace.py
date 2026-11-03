@@ -73,7 +73,7 @@ def render_speaker_workspace():
         state["data"] = uploaded.getvalue()
         state["filename"] = Path(uploaded.name).name
     if "data" not in state:
-        st.info("Upload a CSV to start. Only numbered talks 1–93 are processed.")
+        st.info("Upload a CSV to start. Rows with numeric Ref Number values are processed.")
         return
     token = hashlib.sha256(state["data"] + repr(options).encode()).hexdigest()
     previous = state.get("review")
@@ -131,9 +131,10 @@ def render_speaker_workspace():
         try:
             if path is not None and not path.is_dir():
                 raise ValueError("Transcript folder is not accessible. Choose a local folder or leave it blank to use CSV sources only.")
-            extractor_key = str(path.resolve()) if path else ""
+            references = frozenset(row.reference for row in review.table.eligible_rows)
+            extractor_key = (str(path.resolve()) if path else "", references)
             if state.get("extractor_key") != extractor_key or not isinstance(state.get("extractor"), SpeakerExtractor):
-                state["extractor"] = SpeakerExtractor(TranscriptIndex(path) if path else None)
+                state["extractor"] = SpeakerExtractor(TranscriptIndex(path, allowed_references=references) if path else None)
                 state["extractor_key"] = extractor_key
             extractor = state["extractor"]
             if extractor.transcripts:

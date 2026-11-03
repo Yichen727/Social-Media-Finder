@@ -36,7 +36,7 @@ If a search fails, wait briefly and use **Refresh Search**, or try another spell
 
 1. Open **Speakers Detection** (the default workspace) and upload your content CSV.
 2. Optionally enter the **Transcript folder** path on the computer running the app. Extract your transcript ZIP first.
-3. Click **Find speakers**. Only talks numbered 1–93 are processed, using **High-res video name → YouTube Caption → DOCX opening**, stopping at the first successful source. Explicit title participants are kept in title order, separated by `; ` when there are several. Rows without recognizable names stay blank.
+3. Click **Find speakers**. Rows with valid numeric **Ref Number** values are processed, using **High-res video name → YouTube Caption → DOCX opening**, stopping at the first successful source. Explicit title participants are kept in title order, separated by `; ` when there are several. Rows without recognizable names stay blank.
 4. Edit or clear **Speakers** in the table. Open **Source evidence** to check a suggestion. Transcript name candidates carry `*`, including hosts or people only mentioned. Check names and remove `*` after verification; the download retains any markers you leave in the table.
 5. Click **Apply reviewed changes**, then **Download completed CSV**. Later edits require approval again.
 

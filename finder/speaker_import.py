@@ -12,7 +12,6 @@ import os
 from pathlib import Path
 import re
 
-NUMBERED_TALKS = frozenset(range(1, 94))
 DELIMITERS = (",", ";", "\t", "|")
 
 
@@ -28,10 +27,10 @@ def normalize_reference(value: str) -> int | None:
     value = value.strip()
     if not re.fullmatch(r"[0-9]+", value):
         return None
-    digits = value.lstrip("0")
-    if not digits or len(digits) > 9:
+    try:
+        return int(value)
+    except ValueError:
         return None
-    return int(digits)
 
 
 @dataclass(frozen=True)
@@ -129,8 +128,8 @@ def _delimiter(text: str) -> str:
 
 def load_speaker_csv(data: bytes, *, encoding: str | None = None, delimiter: str | None = None,
                      speaker_column: str | None = None,
-                     allowed_references: Collection[int] = NUMBERED_TALKS) -> SpeakerCSV:
-    """Import uploaded bytes, preserving cells and restricting eligibility to refs 1–93."""
+                     allowed_references: Collection[int] | None = None) -> SpeakerCSV:
+    """Import uploaded bytes, preserving cells and accepting integer references."""
     text, detected_encoding = _decode(data, encoding)
     chosen_delimiter = delimiter if delimiter is not None else _delimiter(text)
     if chosen_delimiter not in DELIMITERS:
@@ -174,8 +173,8 @@ def load_speaker_csv(data: bytes, *, encoding: str | None = None, delimiter: str
     reference_index = headers.index(names["ref number"])
     speaker_index = headers.index(selected)
     references = [normalize_reference(record[reference_index]) for record in records]
-    allowed = frozenset(allowed_references)
-    counts = Counter(ref for ref in references if ref in allowed)
+    allowed = frozenset(allowed_references) if allowed_references is not None else None
+    counts = Counter(ref for ref in references if ref is not None and (allowed is None or ref in allowed))
     rows = []
     for row_id, (record, reference) in enumerate(zip(records, references)):
         original_ref = record[reference_index]
@@ -184,7 +183,7 @@ def load_speaker_csv(data: bytes, *, encoding: str | None = None, delimiter: str
             issue = "missing_reference"
         elif reference is None:
             issue = "invalid_reference"
-        elif reference not in allowed:
+        elif allowed is not None and reference not in allowed:
             issue = "out_of_scope"
         elif counts[reference] > 1:
             issue = "duplicate_reference"
@@ -209,9 +208,9 @@ class TranscriptMatch:
 class TranscriptIndex:
     """Scan filenames only on the first lookup; never open a DOCX file."""
 
-    def __init__(self, folder: str | Path, *, allowed_references: Collection[int] = NUMBERED_TALKS):
+    def __init__(self, folder: str | Path, *, allowed_references: Collection[int] | None = None):
         self.folder = Path(folder).expanduser() if str(folder).strip() else None
-        self.allowed_references = frozenset(allowed_references)
+        self.allowed_references = frozenset(allowed_references) if allowed_references is not None else None
         self.refresh()
 
     def refresh(self):
@@ -224,7 +223,7 @@ class TranscriptIndex:
     def _hint(self, name: str) -> int | None:
         match = re.match(r"^([0-9]+)(?:[.\s_-]|$)", name)
         reference = normalize_reference(match[1]) if match else None
-        return reference if reference in self.allowed_references else None
+        return reference if self.allowed_references is None or reference in self.allowed_references else None
 
     def _load(self):
         self.loaded = True
@@ -258,8 +257,8 @@ class TranscriptIndex:
 
     def lookup(self, reference: str | int) -> TranscriptMatch:
         ref = normalize_reference(str(reference))
-        if ref not in self.allowed_references:
-            return TranscriptMatch(ref, "invalid_reference", message="Use an in-scope numbered talk reference.")
+        if ref is None or (self.allowed_references is not None and ref not in self.allowed_references):
+            return TranscriptMatch(ref, "invalid_reference", message="Use a valid numbered talk reference.")
         if not self.loaded:
             self._load()
         if self._error:

@@ -6,7 +6,7 @@ Status: milestones 1–3 completed, 3 November 2026. CSV import, ordered main-sp
 
 Deliver two stages:
 
-1. Detect and fill **speaker information** for the **93 numbered talks**. Use the following sources in this exact order:
+1. Detect and fill **speaker information** for **all rows with valid numeric Ref Number values**. The supplied sample contains 93 such talks; 93 is not a processing limit. Use the following sources in this exact order:
    1. The row's `High-res video name`.
    2. The same row's `YouTube Caption`.
    3. Opening paragraphs of the matching DOCX in the transcript folder.
@@ -28,7 +28,7 @@ Inspected read-only:
 | Item | Observed result | Planned handling |
 | --- | --- | --- |
 | CSV size | 254 data rows, 21 columns | Preserve every original row and column in the completed CSV. |
-| In-scope talks | 93 rows with unique numeric `Ref Number` values 1–93 | Only these rows enter main-speaker detection. |
+| Sample numbered talks | 93 rows with unique numeric `Ref Number` values 1–93 | The sample has 93 talks; any valid integer reference is supported, without a fixed 1–93 limit. |
 | Out-of-scope rows | 160 blank references and one reference containing `YES` | Leave their speaker values and all other cells unchanged. No title-only processing of these rows. |
 | Speaker field | Existing header is `Speakers`, plural | Reuse it rather than adding a duplicate `Speaker` column. |
 | Existing values | References 1–4 have speaker text | Retain the previous fill-blanks-only default: preserve those four cells; process the 89 numbered blank cells unless the user explicitly clears an existing value. |
@@ -168,6 +168,8 @@ Automatic batch searching, background search queues, and searches for moderators
 
 ## 6. Implementation sequence
 
+Reference-scope correction: CSV import and transcript matching accept all valid nonnegative integer references, without a fixed 1–93 range or nine-digit application limit. Blank/non-numeric references remain excluded, and duplicate-reference handling is unchanged. The UI derives transcript matching scope from the current CSV. No tests were run for this update, per the user’s preference.
+
 UI update: Speakers Detection is the first/default workspace. CSV options are hidden and fixed to Auto; exports preserve the detected source encoding and BOM. This small update was not tested, as requested by the user. Earlier verification counts below describe previous versions.
 
 Transcript-policy update: collect opening name mentions regardless of main-speaker role, preserve per-name evidence, and mark each transcript candidate with `*` in preview/export. The corrected-file run produced 38 title rows and 48 transcript-candidate rows, with three unresolved; these are not verified-speaker counts. All 178 focused tests passed. See [validation/transcript-candidates.md](validation/transcript-candidates.md), including known false positives and limits.
@@ -194,7 +196,7 @@ The folder path is local to the machine running Streamlit. Extract `TRANSCRIPTS 
 
 ## 7. Acceptance and evaluation
 
-Review a representative sample of about 20 talks before claiming extraction quality, covering all three winning sources, placeholders, damaged names, institutions, introducers, moderators, ambiguous panels, and missing names. Review the 93 numbered talks for production acceptance.
+Review a representative sample of about 20 talks before claiming extraction quality, covering all three winning sources, placeholders, damaged names, institutions, introducers, moderators, ambiguous panels, and missing names. Review all numbered talks in the imported file for production acceptance (93 in the supplied sample).
 
 Measure correctly accepted main speakers, incorrect fills, unresolved rows, and source usage separately. No accuracy percentage is available yet. Completing more cells is not a substitute for identifying the correct main speaker.
 
