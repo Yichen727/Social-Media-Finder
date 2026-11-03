@@ -1,6 +1,6 @@
 # Speaker Extraction and Social Search — Development Plan
 
-Status: milestone 1 completed, 3 November 2026. CSV import, row eligibility, and lazy transcript matching are implemented. Speaker extraction, UI integration, and social-search handoff remain planned. The supplied CSV/DOCX files are unchanged.
+Status: milestones 1 and 2 completed, 3 November 2026. CSV import, eligibility, lazy transcript matching, and ordered deterministic main-speaker proposals are implemented. UI review/export and social-search handoff remain planned. The supplied CSV/DOCX files are unchanged.
 
 ## 1. Confirmed requirements
 
@@ -166,12 +166,14 @@ Automatic batch searching, background search queues, and searches for moderators
 
 ## 6. Implementation sequence
 
-Milestone 1 is implemented and verified: 36 focused tests passed; the supplied data preserved 254 rows/21 columns, identified 93 eligible talks (89 pending, four prefilled), and matched all 93 DOCX files without reading their bodies. See [validation/speaker-import.md](validation/speaker-import.md). The importer is a backend module; no upload UI or name-extraction behavior has been added yet.
+Milestone 1 is implemented and verified: 36 focused tests passed; the supplied data preserved 254 rows/21 columns, identified 93 eligible talks (89 pending, four prefilled), and matched all 93 DOCX files without reading their bodies. See [validation/speaker-import.md](validation/speaker-import.md). The importer and extractor are backend modules; no upload/review UI has been added yet.
+
+Milestone 2 is implemented and verified: 96 focused import/extraction tests passed. Of 89 eligible blank cells, the supplied corpus produced 29 proposals (26 title, zero caption-only, three transcript); 60 remained unresolved. The four existing cells and 161 excluded rows were preserved. Twenty talks were reviewed during development, with known missed guest attributions documented. These counts are not an accuracy estimate. See [validation/speaker-extraction.md](validation/speaker-extraction.md).
 
 | Milestone | Proposed change | Check before moving on |
 | --- | --- | --- |
 | **1. Import and eligibility — complete** | `finder/speaker_import.py`: CSV decoding, headers, text values, row identity, valid numbered scope, and lazy transcript matching | 93 eligible talks; original 254 rows/21 columns retained; prefilled cells preserved. |
-| 2. Ordered extraction | `finder/speaker_extract.py`: separate title, caption, and transcript extractors with a shared main-speaker success contract | Title → caption → transcript order; no downstream extractor called after success. |
+| **2. Ordered extraction — complete** | `finder/speaker_extract.py`: separate title, caption, and transcript extractors with a shared main-speaker success contract | Title → caption → transcript order; no downstream extractor called after success. |
 | 3. Review and export | Compact Speakers workspace in `app.py`, evidence on demand, editable values, completed-CSV download | Only accepted in-scope speaker cells change. |
 | 4. Search handoff | Reviewed main-speaker record to existing search form/session state | Prefilling does not automatically trigger a network search. |
 | 5. Optional model evaluation | Separate model adapter only if adopted after baseline evaluation | Main-speaker accuracy improves while preserving evidence validation and early stopping. |
@@ -208,4 +210,4 @@ Scope, role, source order, and stopping behavior are settled and should not be r
 
 For panels without an identifiable main speaker, the default is unresolved/blank with manual review. Supporting explicitly co-main speakers would be a separate extension rather than an automatic participant list.
 
-Milestone 1 is complete. The next milestone is the deterministic main-speaker extractor using the confirmed title → YouTube Caption → transcript cascade. UI review and social-search handoff follow in their own milestones.
+Milestones 1 and 2 are complete. The next milestone is the compact review/edit/export workspace in `app.py`, applying only reviewed speaker-cell changes. Social-search handoff follows separately.
