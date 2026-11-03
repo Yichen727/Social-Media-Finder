@@ -71,7 +71,7 @@ def test_candidate_links_and_failure_details_are_available():
         ])
     with patch("finder.service.FinderService.search_platform", side_effect=result):
         app.button[0].click().run()
-    app.radio[0].set_value("Profiles").run()
+    next(widget for widget in app.radio if widget.label == "View").set_value("Profiles").run()
     assert not app.exception
     assert any(element.value == "https://x.com/alexmorgan" for element in app.text)
     assert any("TimeoutError: timeout" in element.value for element in app.text)

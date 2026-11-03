@@ -7,6 +7,7 @@ from finder.export import SORT_OPTIONS, VISIBLE_COLUMNS, export_csv, result_rows
 from finder.public_evidence import PublicEvidenceVerifier
 from finder.query_builder import build_queries, manual_search_url
 from finder.service import FinderService
+from finder.speaker_workspace import render_speaker_workspace
 
 st.set_page_config(page_title="Social Media Finder", page_icon="🔎", layout="wide")
 st.markdown("""
@@ -69,18 +70,34 @@ def render_result(result: PlatformResult, person: Person):
                     st.text(note)
 
 
+def preserve_search_form():
+    keys = ("search_platforms", "search_full_name", "search_profession", "search_organization")
+    if st.session_state.workspace == "Speakers":
+        saved = st.session_state.setdefault("social_form_values", {})
+        saved.update({key: st.session_state[key] for key in keys if key in st.session_state})
+    else:
+        for key, value in st.session_state.get("social_form_values", {}).items():
+            st.session_state[key] = value
+
+
 st.title("Social Media Finder")
+workspace = st.radio("Workspace", ["Social search", "Speakers"], horizontal=True,
+                     key="workspace", label_visibility="collapsed", on_change=preserve_search_form)
+if workspace == "Speakers":
+    render_speaker_workspace()
+    st.stop()
 st.caption("Find public profiles on LinkedIn, Instagram, and X.")
 
+st.session_state.setdefault("search_platforms", [platform.value for platform in Platform])
 selected_platform_names = st.multiselect("Platforms", [platform.value for platform in Platform],
-                                       default=[platform.value for platform in Platform], key="search_platforms")
+                                       key="search_platforms")
 with st.form("person_search"):
-    full_name = st.text_input("Full Name *", placeholder="e.g. Emma Watson", max_chars=160)
+    full_name = st.text_input("Full Name *", placeholder="e.g. Emma Watson", max_chars=160, key="search_full_name")
     profession = organization = ""
     if Platform.LINKEDIN.value in selected_platform_names:
         columns = st.columns(2)
-        profession = columns[0].text_input("Profession / Occupation", placeholder="e.g. Actress", max_chars=160)
-        organization = columns[1].text_input("Company / Organization", placeholder="e.g. BBC", max_chars=160)
+        profession = columns[0].text_input("Profession / Occupation", placeholder="e.g. Actress", max_chars=160, key="search_profession")
+        organization = columns[1].text_input("Company / Organization", placeholder="e.g. BBC", max_chars=160, key="search_organization")
         st.caption("Profession and company apply to LinkedIn only.")
     submitted = st.form_submit_button("Search", type="primary", use_container_width=True)
 
