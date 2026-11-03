@@ -67,6 +67,7 @@ class SpeakerCSV:
     speaker_column: str
     video_name_column: str | None
     caption_column: str | None
+    bom: bytes = b""
 
     @property
     def eligible_rows(self) -> tuple[SpeakerRow, ...]:
@@ -77,17 +78,24 @@ class SpeakerCSV:
         return tuple(row for row in self.rows if row.needs_speaker)
 
     def to_csv_bytes(self) -> bytes:
-        """Round-trip source values as Excel-compatible UTF-8; never write a file."""
+        """Round-trip source values in the detected input encoding; never write a file."""
         output = io.StringIO(newline="")
         writer = csv.writer(output, delimiter=self.delimiter, lineterminator="\r\n")
         writer.writerow(self.headers)
         writer.writerows(row.cells for row in self.rows)
-        return output.getvalue().encode("utf-8-sig")
+        return self.encode_csv(output.getvalue())
+
+    def encode_csv(self, text: str) -> bytes:
+        """Retain the source encoding, including UTF-8 BOM and UTF-16 byte order."""
+        encoded = text.encode(self.encoding)
+        return self.bom + encoded if self.encoding in {"utf-16-le", "utf-16-be"} else encoded
 
 
 def _decode(data: bytes, encoding: str | None) -> tuple[str, str]:
     choices = (encoding,) if encoding else (
-        ("utf-16",) if data.startswith((b"\xff\xfe", b"\xfe\xff")) else ("utf-8-sig", "cp1252")
+        ("utf-16-le",) if data.startswith(b"\xff\xfe") else
+        ("utf-16-be",) if data.startswith(b"\xfe\xff") else
+        ("utf-8-sig", "cp1252") if data.startswith(b"\xef\xbb\xbf") else ("utf-8", "cp1252")
     )
     for choice in choices:
         try:
@@ -182,7 +190,8 @@ def load_speaker_csv(data: bytes, *, encoding: str | None = None, delimiter: str
             issue = "duplicate_reference"
         rows.append(SpeakerRow(row_id, headers, record, reference, issue, bool(record[speaker_index].strip())))
     return SpeakerCSV(headers, tuple(rows), detected_encoding, chosen_delimiter, names["ref number"],
-                      selected, names.get("high-res video name"), names.get("youtube caption"))
+                      selected, names.get("high-res video name"), names.get("youtube caption"),
+                      bom=data[:2] if data.startswith((b"\xff\xfe", b"\xfe\xff")) else b"")
 
 
 @dataclass(frozen=True)

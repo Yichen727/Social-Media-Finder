@@ -1,6 +1,6 @@
 # Social Media Finder
 
-Find public profiles on **LinkedIn, Instagram, and X**, compare follower counts, and export results to CSV. Use **Speakers** to fill and review speaker names in a content CSV. No API key or social-platform login is required.
+Find public profiles on **LinkedIn, Instagram, and X**, compare follower counts, and export results to CSV. Use **Speakers Detection** to fill and review speaker names in a content CSV. No API key or social-platform login is required.
 
 ## Start
 
@@ -34,12 +34,12 @@ If a search fails, wait briefly and use **Refresh Search**, or try another spell
 
 ## Fill speakers
 
-1. Choose **Speakers** and upload your content CSV.
+1. Open **Speakers Detection** (the default workspace) and upload your content CSV.
 2. Optionally enter the **Transcript folder** path on the computer running the app. Extract your transcript ZIP first.
 3. Click **Find speakers**. Only talks numbered 1–93 are processed, using **High-res video name → YouTube Caption → DOCX opening**, stopping at the first successful source. Explicit title participants are kept in title order, separated by `; ` when there are several. Rows without recognizable names stay blank.
 4. Edit or clear **Speakers** in the table. Open **Source evidence** to check a suggestion. Transcript name candidates carry `*`, including hosts or people only mentioned. Check names and remove `*` after verification; the download retains any markers you leave in the table.
 5. Click **Apply reviewed changes**, then **Download completed CSV**. Later edits require approval again.
 
-The download keeps every source row and column. Existing speaker values are preserved unless you edit them; source files are never overwritten. Repeating **Find speakers** keeps manual edits. **Reset review** discards manual edits and restores the latest suggestions. Changing the CSV or its import options starts a new review. Review data stays in the current app session.
+CSV settings are detected automatically. The download keeps the detected source encoding, BOM, delimiter, and every source row and column. Existing speaker values are preserved unless you edit them; source files are never overwritten. Repeating **Find speakers** keeps manual edits. **Reset review** discards manual edits and restores the latest suggestions. Changing the CSV starts a new review. Review data stays in the current app session.
 
-Use **CSV options** if you need to select an encoding, delimiter, or target column when both `Speaker` and `Speakers` exist. Sending reviewed names into social search will be added in the next step.
+Sending reviewed names into social search will be added in the next step.

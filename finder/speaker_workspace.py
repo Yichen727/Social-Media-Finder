@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 
 from finder.speaker_extract import SpeakerExtractor
-from finder.speaker_import import SpeakerImportError, TranscriptIndex, load_speaker_csv
+from finder.speaker_import import SpeakerCSV, SpeakerImportError, TranscriptIndex, load_speaker_csv
 from finder.speaker_review import SpeakerReview
 
 SOURCE_LABELS = {"video_title": "High-res video name", "youtube_caption": "YouTube Caption", "transcript": "Transcript"}
@@ -67,19 +67,7 @@ def render_speaker_workspace():
                            placeholder=r"e.g. C:\Content\TRANSCRIPTS V2",
                            help="Optional local folder on the machine running this app. Extract the ZIP first.")
     state["folder"] = folder
-    with st.expander("CSV options"):
-        st.caption("Changing these options starts a new review of the uploaded data.")
-        encoding_options = {"Auto": None, "UTF-8": "utf-8-sig", "Windows-1252": "cp1252",
-                            "UTF-16": "utf-16", "GB18030": "gb18030"}
-        delimiter_options = {"Auto": None, "Comma": ",", "Semicolon": ";", "Tab": "\t", "Pipe": "|"}
-        columns = st.columns(3)
-        for key, default in zip(("speaker_encoding", "speaker_delimiter", "speaker_column"), state.get("options", ("Auto",) * 3)):
-            st.session_state.setdefault(key, default)
-        encoding = columns[0].selectbox("Encoding", list(encoding_options), key="speaker_encoding")
-        delimiter = columns[1].selectbox("Delimiter", list(delimiter_options), key="speaker_delimiter")
-        speaker_column = columns[2].selectbox("Speaker column", ["Auto", "Speakers", "Speaker"], key="speaker_column",
-                                              help="Choose a column if your CSV has both Speaker and Speakers.")
-    options = (encoding, delimiter, speaker_column)
+    options = ("Auto",) * 3
     state["options"] = options
     if uploaded is not None:
         state["data"] = uploaded.getvalue()
@@ -88,15 +76,18 @@ def render_speaker_workspace():
         st.info("Upload a CSV to start. Only numbered talks 1–93 are processed.")
         return
     token = hashlib.sha256(state["data"] + repr(options).encode()).hexdigest()
-    if token != state.get("token"):
+    previous = state.get("review")
+    if token != state.get("token") or not isinstance(previous.table if previous else None, SpeakerCSV):
         try:
-            table = load_speaker_csv(state["data"], encoding=encoding_options[encoding],
-                                     delimiter=delimiter_options[delimiter],
-                                     speaker_column=None if speaker_column == "Auto" else speaker_column)
+            table = load_speaker_csv(state["data"])
         except SpeakerImportError as exc:
             st.error(str(exc))
             return
         state["review"] = SpeakerReview(table)
+        if previous and token == state.get("token"):
+            state["review"].proposals = dict(previous.proposals)
+            state["review"].edits = dict(previous.edits)
+            state["review"].approved = previous.approved
         state["token"] = token
         state["generation"] = state.get("generation", 0) + 1
     review = state["review"]
@@ -163,6 +154,13 @@ def render_speaker_workspace():
         st.rerun()
     if review.ready:
         st.caption("Review applied. The download contains every source row and column.")
-    st.download_button("Download completed CSV", data=review.export_csv() if review.ready else b"",
+    download = None
+    if review.ready:
+        try:
+            download = review.export_csv()
+        except UnicodeEncodeError:
+            st.error(f"Some reviewed names cannot be saved as {review.table.encoding}. "
+                     "Edit those names or upload a UTF-8 copy of the source CSV.")
+    st.download_button("Download completed CSV", data=download if download is not None else b"",
                        file_name=f"{Path(state['filename']).stem}_speakers_filled.csv", mime="text/csv",
-                       disabled=not review.ready, key="download_speakers")
+                       disabled=download is None, key="download_speakers")

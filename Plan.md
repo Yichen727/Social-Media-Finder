@@ -34,7 +34,7 @@ Inspected read-only:
 | Existing values | References 1–4 have speaker text | Retain the previous fill-blanks-only default: preserve those four cells; process the 89 numbered blank cells unless the user explicitly clears an existing value. |
 | Caption content | All 93 numbered rows have a caption cell, but 49 contain `No description` | Treat placeholders as unavailable content; the other 44 cells are potential sources, not guaranteed successful detections. |
 | Transcripts | 93 numbered DOCX files | Every valid reference has exactly one matching DOCX in this sample. |
-| Encoding | UTF-8 decoding failed; Windows-1252 decoding succeeded | Support an encoding preview/selection and export as UTF-8 with BOM. |
+| Encoding | UTF-8 decoding failed; Windows-1252 decoding succeeded | Detect CSV settings automatically; retain the detected input encoding and original BOM on export. |
 | Damaged text | Some video-title names contain literal `?` | Do not reconstruct missing letters by guessing; continue to the next source. |
 
 DOCX files use descriptive names such as `05. Keynote Conversations_ ...docx`. Also support an explicit numbered parent folder containing `transcript.docx`. Do not assume every file is literally called `transcript.docx`.
@@ -167,6 +167,8 @@ Group exact normalized duplicate names only for search convenience while retaini
 Automatic batch searching, background search queues, and searches for moderators/guests are outside this release.
 
 ## 6. Implementation sequence
+
+UI update: Speakers Detection is the first/default workspace. CSV options are hidden and fixed to Auto; exports preserve the detected source encoding and BOM. This small update was not tested, as requested by the user. Earlier verification counts below describe previous versions.
 
 Transcript-policy update: collect opening name mentions regardless of main-speaker role, preserve per-name evidence, and mark each transcript candidate with `*` in preview/export. The corrected-file run produced 38 title rows and 48 transcript-candidate rows, with three unresolved; these are not verified-speaker counts. All 178 focused tests passed. See [validation/transcript-candidates.md](validation/transcript-candidates.md), including known false positives and limits.
 

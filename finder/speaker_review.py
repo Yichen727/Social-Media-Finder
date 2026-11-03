@@ -81,4 +81,4 @@ class SpeakerReview:
             if row.eligible:
                 cells[speaker_index] = self.approved[row.row_id]
             writer.writerow(cells)
-        return output.getvalue().encode("utf-8-sig")
+        return self.table.encode_csv(output.getvalue())

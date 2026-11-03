@@ -72,7 +72,7 @@ def render_result(result: PlatformResult, person: Person):
 
 def preserve_search_form():
     keys = ("search_platforms", "search_full_name", "search_profession", "search_organization")
-    if st.session_state.workspace == "Speakers":
+    if st.session_state.workspace == "Speakers Detection":
         saved = st.session_state.setdefault("social_form_values", {})
         saved.update({key: st.session_state[key] for key in keys if key in st.session_state})
     else:
@@ -81,9 +81,11 @@ def preserve_search_form():
 
 
 st.title("Social Media Finder")
-workspace = st.radio("Workspace", ["Social search", "Speakers"], horizontal=True,
+if st.session_state.get("workspace") == "Speakers":
+    st.session_state.workspace = "Speakers Detection"
+workspace = st.radio("Workspace", ["Speakers Detection", "Social search"], horizontal=True,
                      key="workspace", label_visibility="collapsed", on_change=preserve_search_form)
-if workspace == "Speakers":
+if workspace == "Speakers Detection":
     render_speaker_workspace()
     st.stop()
 st.caption("Find public profiles on LinkedIn, Instagram, and X.")
