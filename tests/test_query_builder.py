@@ -24,7 +24,7 @@ def test_overlong_fields_are_rejected():
 @pytest.mark.parametrize("platform", list(Platform))
 def test_queries_stay_broad_before_adding_context(platform):
     queries = build_queries(Person("Alex Morgan", "Scientist", "Example Lab", "British"), platform)
-    assert len(queries) == (4 if platform == Platform.LINKEDIN else 3)
+    assert len(queries) == {Platform.LINKEDIN: 4, Platform.INSTAGRAM: 2, Platform.X: 2}[platform]
     assert '"Alex Morgan"' in queries[0].text
     assert "Example Lab" not in queries[0].text
     if platform == Platform.LINKEDIN:
@@ -32,23 +32,24 @@ def test_queries_stay_broad_before_adding_context(platform):
         assert "Example Lab" not in queries[1].text
         assert "Example Lab" in queries[2].text
         assert "Scientist" not in queries[2].text
+        assert queries[-1].stage == "Public reference search"
     else:
-        assert "Example Lab" in queries[1].text
-        assert "Scientist" not in queries[1].text
+        assert all("Example Lab" not in query.text and "Scientist" not in query.text for query in queries)
+        assert all(query.stage != "Public reference search" for query in queries)
     assert "British" not in queries[1].text
-    assert queries[-1].stage == "Public reference search"
 
 
 @pytest.mark.parametrize("field,value", [("profession", "Director"), ("country", "Chinese")])
-def test_other_optional_context_is_used(field, value):
+def test_social_search_ignores_optional_career_and_country_context(field, value):
     queries = build_queries(Person("Alex Morgan", **{field: value}), Platform.INSTAGRAM)
-    assert value in queries[1].text
+    assert all(value not in query.text for query in queries)
 
 
-def test_legacy_x_domain_and_encoded_manual_search():
+def test_x_domain_and_encoded_manual_search():
     queries = build_queries(Person("Alex Morgan"), Platform.X)
-    assert "site:x.com/" in queries[0].text
-    assert "site:twitter.com/" in queries[1].text
+    assert "site:x.com" in queries[0].text
+    assert any(query.stage == "Follower discovery" for query in queries)
+    assert all("twitter.com" not in query.text for query in queries)
     assert manual_search_url('"Alex Morgan"') == "https://duckduckgo.com/?q=%22Alex+Morgan%22"
 
 

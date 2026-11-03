@@ -93,6 +93,7 @@ class Candidate:
     follower_note: str = ""
     follower_source: str = ""
     nationality_source: str = ""
+    follower_observed_at: str = ""
 
 
 @dataclass

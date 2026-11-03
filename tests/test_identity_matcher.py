@@ -18,25 +18,28 @@ def test_similar_name_does_not_match():
     assert rank_candidates([candidate("Alexa Morgan", "alexamorgan", "Friend of Alex Morgan")], Person("Alex Morgan")) == []
 
 
-def test_fan_account_is_rejected_even_with_correct_name_and_context():
-    assert rank_candidates([candidate(snippet="Official fan account for scientist Alex Morgan")],
-                           Person("Alex Morgan", "Scientist")) == []
+def test_fan_accounts_remain_available_without_becoming_official():
+    for item in (candidate(snippet="Official fan account for scientist Alex Morgan"),
+                 candidate(handle="alexfanpage"), candidate(handle="alexmorganfans")):
+        match = rank_candidates([item], Person("Alex Morgan", "Scientist"))[0]
+        assert match.status == MatchStatus.POSSIBLE
+        assert match.confidence == "Low"
+        assert any("Fan" in note for note in match.cautions)
 
 
-def test_fan_handle_is_rejected():
-    assert rank_candidates([candidate(handle="alexfanpage")], Person("Alex Morgan")) == []
-
-
-def test_news_and_archive_profiles_are_rejected():
+def test_news_and_archive_profiles_are_retained_for_comparison():
     for title in ("Alex Morgan News", "Alex Morgan Archives", "Alex Morgan Archive", "Alex Morgan Updates", "Alex Morgan fan"):
-        assert rank_candidates([candidate(title=title, handle="alexresearch")], Person("Alex Morgan")) == []
-    assert rank_candidates([candidate(handle="alexmorganfans")], Person("Alex Morgan")) == []
+        matches = rank_candidates([candidate(title=title, handle="alexresearch")], Person("Alex Morgan"))
+        assert len(matches) == 1
+        assert matches[0].status == MatchStatus.POSSIBLE
 
 
 def test_context_can_order_same_name_candidates():
-    matches = rank_candidates([candidate(handle="alex1", snippet="Director at Example Lab"),
-                               candidate(handle="alex2", snippet="Scientist at Example Lab")],
-                              Person("Alex Morgan", "Scientist", "Example Lab"))
+    profiles = extract_candidates([
+        SearchHit("Alex Morgan", "https://www.linkedin.com/in/alex1/", "Director at Example Lab"),
+        SearchHit("Alex Morgan", "https://www.linkedin.com/in/alex2/", "Scientist at Example Lab"),
+    ], Platform.LINKEDIN)
+    matches = rank_candidates(profiles, Person("Alex Morgan", "Scientist", "Example Lab"))
     assert matches[0].handle == "alex2"
     assert matches[0].score > matches[1].score
 

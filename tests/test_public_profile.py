@@ -42,7 +42,7 @@ def candidate(platform=Platform.X, snippet="", title="Alex Morgan", url="https:/
     return extract_candidates([SearchHit(title, url, snippet)], platform)[0]
 
 
-def test_nationality_must_be_explicit_not_copied_from_search_or_location():
+def test_social_details_only_extract_followers_even_when_bio_contains_career_or_nationality():
     item = candidate(snippet="Location: London, United Kingdom · 2K followers")
     populate_public_details(item, Person("Alex Morgan", "Producer", "Example Studios", "British"))
     assert item.nationality == ""
@@ -50,9 +50,9 @@ def test_nationality_must_be_explicit_not_copied_from_search_or_location():
     assert item.follower_count == 2000
     item.hits.append(SearchHit("Alex Morgan", item.url, "Nationality: British · Senior Creative Producer at Example Studios"))
     populate_public_details(item, Person("Alex Morgan"))
-    assert item.nationality == "British"
-    assert item.nationality_source == item.url
-    assert (item.job_title, item.company) == ("Senior Creative Producer", "Example Studios")
+    assert item.nationality == item.nationality_source == ""
+    assert item.job_title == item.company == ""
+    assert item.follower_count == 2000
 
 
 def test_follower_count_has_source_and_original_text():
@@ -129,4 +129,6 @@ def test_fan_disclosure_in_metrics_lookup_is_not_promoted_by_large_count():
         snippet = "Fan account · 55M followers" if query.stage == "Public profile metrics" else ""
         return QueryRun(query, hits=[SearchHit("Alex Morgan", "https://x.com/alexmorgan", snippet)])
     result = FinderService(Mock(search=search)).search_platform(Person("Alex Morgan"), Platform.X)
-    assert result.candidates == []
+    assert len(result.candidates) == 1
+    assert result.candidates[0].confidence == "Low"
+    assert any("Fan" in note for note in result.candidates[0].cautions)

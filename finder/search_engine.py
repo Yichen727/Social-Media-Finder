@@ -32,7 +32,7 @@ def classify_error(exc: Exception) -> SearchError:
 
 
 class DDGSSearchEngine:
-    def __init__(self, timeout: int = 8, max_results: int = 8, max_attempts: int = 2,
+    def __init__(self, timeout: int = 8, max_results: int = 20, max_attempts: int = 2,
                  client_factory: Callable | None = None, sleep: Callable = time.sleep):
         self.timeout = timeout
         self.max_results = max_results

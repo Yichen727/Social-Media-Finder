@@ -3,7 +3,7 @@
 import re
 import unicodedata
 
-from finder.models import Candidate, Evidence, MatchStatus, Person
+from finder.models import Candidate, Evidence, MatchStatus, Person, Platform
 
 
 def normalized(value: str) -> str:
@@ -28,7 +28,12 @@ def has_fan_signal(text: str) -> bool:
 
 def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
     from finder.linkedin_profile import populate_career_details, title_match_level
-    populate_career_details(candidate, person)
+    if candidate.platform == Platform.LINKEDIN:
+        populate_career_details(candidate, person)
+    else:
+        person = Person(person.full_name)
+        candidate.headline = candidate.job_title = candidate.company = ""
+        candidate.professional_evidence = []
     candidate.evidence = [e for e in candidate.evidence if e.strength == "strong"]
     candidate.cautions = []
     score = 0
@@ -111,5 +116,10 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
 
 def rank_candidates(candidates: list[Candidate], person: Person) -> list[Candidate]:
     ranked = [rank_candidate(candidate, person) for candidate in candidates]
-    return sorted((candidate for candidate in ranked if candidate.score >= 35),
-                  key=lambda candidate: (-candidate.score, candidate.url))[:5]
+    # Keep namesakes and self-described fan accounts for user comparison.
+    # A matching name/handle is required; merely mentioning the person is insufficient.
+    relevant = [candidate for candidate in ranked
+                if candidate.score >= 35
+                or any(contains_name(hit.title, person.full_name) for hit in candidate.hits)
+                or "".join(words(candidate.handle)) == "".join(words(person.full_name))]
+    return sorted(relevant, key=lambda candidate: (-candidate.score, candidate.url))

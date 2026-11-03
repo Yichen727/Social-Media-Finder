@@ -15,8 +15,8 @@ def build_queries(person: Person, platform: Platform) -> list[Query]:
     name = f'"{search_term(person.full_name)}"'
     scope = {
         Platform.LINKEDIN: "site:linkedin.com/in/",
-        Platform.INSTAGRAM: "site:instagram.com/",
-        Platform.X: "site:x.com/",
+        Platform.INSTAGRAM: "site:instagram.com",
+        Platform.X: "site:x.com",
     }[platform]
     queries = [Query("Broad search", f"{scope} {name}")]
     if platform == Platform.LINKEDIN:
@@ -31,22 +31,11 @@ def build_queries(person: Person, platform: Platform) -> list[Query]:
         if not contexts:
             queries.append(Query("Contextual search", f"{scope} {name} official"))
     else:
-        context = search_term(person.organization or person.profession or person.country)
-        # Keep the existing lightweight discovery strategy for the other platforms.
-        if context:
-            context_scope = "site:twitter.com/" if platform == Platform.X else scope
-            queries.append(Query("Contextual search", f"{context_scope} {name} {context}"))
-        elif platform == Platform.X:
-            queries.append(Query("Legacy domain search", f"site:twitter.com/ {name}"))
-        else:
-            queries.append(Query("Contextual search", f"{scope} {name} official"))
-    reference = {
-        Platform.LINKEDIN: '"linkedin.com/in/"',
-        Platform.INSTAGRAM: '"instagram.com/"',
-        Platform.X: '("x.com/" OR "twitter.com/")',
-    }[platform]
+        # Career context belongs to LinkedIn only. Social searches focus on names/metrics.
+        queries.append(Query("Follower discovery", f'{scope} {name} "Followers"'))
+        return queries
     exclusions = "-site:linkedin.com -site:instagram.com -site:x.com -site:twitter.com"
-    queries.append(Query("Public reference search", f"{name} {reference} {exclusions}"))
+    queries.append(Query("Public reference search", f'{name} "linkedin.com/in/" {exclusions}'))
     return queries
 
 

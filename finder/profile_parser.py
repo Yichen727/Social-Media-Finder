@@ -41,13 +41,14 @@ def normalize_profile_url(raw: str) -> tuple[Platform, str, str] | None:
                 if re.fullmatch(r"[\w-]{1,100}", handle, re.UNICODE):
                     return Platform.LINKEDIN, f"https://www.linkedin.com/in/{handle}/", handle
         if host in {"instagram.com", "www.instagram.com", "m.instagram.com"}:
-            if len(segments) == 1:
+            if len(segments) == 1 or (len(segments) == 2 and segments[1] in {"reels", "tagged"}):
                 handle = segments[0].lower()
                 if (handle not in IG_RESERVED and re.fullmatch(r"[a-z0-9_.]{1,30}", handle)
                         and not handle.startswith(".") and not handle.endswith(".") and ".." not in handle):
                     return Platform.INSTAGRAM, f"https://www.instagram.com/{handle}/", handle
-        if host in {"x.com", "www.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com", "m.twitter.com"}:
-            if len(segments) == 1:
+        if host in {"x.com", "www.x.com", "mobile.x.com", "m.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com", "m.twitter.com"}:
+            # These tabs retain the account header; posts and follower lists do not qualify.
+            if len(segments) == 1 or (len(segments) == 2 and segments[1] in {"with_replies", "media", "highlights", "reposts"}):
                 handle = segments[0].lower()
                 if handle not in X_RESERVED and re.fullmatch(r"[a-z0-9_]{1,15}", handle):
                     return Platform.X, f"https://x.com/{handle}", handle

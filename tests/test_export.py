@@ -30,8 +30,8 @@ def test_single_and_multiple_platform_filters():
 
 def test_required_columns_and_original_reference_link_are_retained():
     row = result_rows(Person("Alex Morgan"), example_results())[0]
-    assert (row["Profession"], row["Company"], row["Nationality"], row["Followers"]) == (
-        "Producer", "Example Studios", "British", 2000
+    assert (row["Profession"], row["Company"], row["Followers"]) == (
+        "Producer", "Example Studios", 2000
     )
     assert row["Reference URL"] == "https://uk.linkedin.com/in/alex?trk=search"
     assert row["Profile URL"] == "https://www.linkedin.com/in/alex/"
@@ -49,8 +49,9 @@ def test_numeric_follower_ranking_and_unknowns_last_both_directions():
 
 def test_missing_metadata_not_filled_from_search_inputs():
     row = result_rows(Person("Alex Morgan", "Actor", "Other Company", "Canadian"), example_results())[1]
-    assert row["Profession"] == row["Company"] == row["Nationality"] == ""
-    assert row["Search Profession"] == "Actor" and row["Search Nationality / Country"] == "Canadian"
+    assert row["Profession"] == row["Company"] == ""
+    assert row["Search Profession"] == ""
+    assert "Nationality" not in row and "Search Nationality / Country" not in row
 
 
 def test_failure_and_no_match_status_rows_are_preserved():

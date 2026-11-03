@@ -12,7 +12,8 @@ def test_dashboard_starts_in_english_with_optional_fields_empty():
     app = AppTest.from_file(APP).run()
     assert not app.exception
     assert app.title[0].value == "Social Media Finder"
-    assert len(app.text_input) == 4
+    assert len(app.text_input) == 3
+    assert not any("Nationality" in widget.label for widget in app.text_input)
     assert all(widget.value == "" for widget in app.text_input)
     assert len([caption for caption in app.caption if caption.value == "Not Searched"]) == 3
 
@@ -33,7 +34,8 @@ def test_empty_results_and_refresh_are_rendered_without_network_calls():
         app.button[0].click().run()
         assert not app.exception
         assert search.call_count == 3
-        assert list(app.dataframe[0].value["Match Status"]) == ["No Reliable Match"] * 3
+        assert sum("no matching profiles" in message.value for message in app.info) == 3
+        assert "Match Status" not in app.dataframe[0].value.columns
         refresh = next(button for button in app.button if button.label == "Refresh Search")
         refresh.click().run()
         assert not app.exception and search.call_count == 6
@@ -46,8 +48,8 @@ def test_failed_search_is_visibly_distinct_from_no_match():
                side_effect=lambda person, platform: PlatformResult(platform, MatchStatus.FAILED if platform == Platform.X else MatchStatus.NONE)):
         app.button[0].click().run()
     assert not app.exception
-    assert list(app.dataframe[0].value["Match Status"]).count("Search Failed") == 1
-    assert list(app.dataframe[0].value["Match Status"]).count("No Reliable Match") == 2
+    assert sum("search failed" in message.value for message in app.error) == 1
+    assert sum("no matching profiles" in message.value for message in app.info) == 2
 
 
 def test_candidate_links_and_failure_details_are_available():

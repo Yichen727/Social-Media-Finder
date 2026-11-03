@@ -1,6 +1,6 @@
 # Social Media Finder
 
-A local, English-language dashboard for researching a person's public **LinkedIn, Instagram, and X / Twitter** accounts. Enter a name, select one or more platforms, and review a sortable list with profession, company, nationality, follower counts, and reference links. Download the filtered list as CSV.
+A local, English-language dashboard for researching a person's public **LinkedIn, Instagram, and X / Twitter** accounts. Enter a name, select one or more platforms, and review a sortable list with profession, company, follower counts, and reference links. Download the filtered list as CSV.
 
 The application uses free web search. It requires **no API key, paid service, LLM, or social-platform login**.
 
@@ -42,24 +42,29 @@ Both launchers support paths containing spaces. If you move the folder between c
 ## 4. Find profiles
 
 1. Enter **Full Name**. This is the only required field.
-2. Optionally enter **Profession / Occupation**, **Organization / Affiliation**, and **Nationality / Country**. Leave unknown details blank.
-3. Select one, two, or all three **Platforms**, then select **Search**. Only selected platforms are queried.
-4. Review the default **List** view. Up to five candidates are shown per searched platform, initially sorted by numeric follower count, highest first.
-5. Use **Platforms in list** to include one or more searched platforms in the table and export. Choose **Sort by** for follower count, name, company, profession, or nationality. These controls do not repeat searches.
+2. Select one or more **Platforms**. **Profession / Occupation** and **Company / Organization** appear only when LinkedIn is selected, and apply only to LinkedIn.
+3. Select **Search**. Selected platforms run concurrently and completed results appear as they arrive.
+4. Review the default **List** view. All matching-name profiles returned by the bounded searches are shown per searched platform, initially sorted by numeric follower count, highest first.
+5. Use **Platforms in list** to include one or more searched platforms in the table and export. Choose **Sort by** for follower count or name, plus company/profession when LinkedIn is included. These controls do not repeat searches.
 6. Select **Download CSV** to save the filtered list in the selected sort order. The UTF-8 CSV opens in Excel and other spreadsheet tools.
 7. Open a clickable **Reference URL** to inspect the original source. Switch **View** to **Profiles** for individual profile buttons, search queries, manual search links, and technical details.
-8. Select **Refresh Search** to rerun the same person and searched platforms. To change the person, context, or search scope, edit the form and select **Search**.
+8. If follower counts remain missing, select **Fill missing Followers** to continue lookups without repeating discovery. Initial follower enrichment has a twelve-second scheduling budget per platform; in-flight provider requests may finish later. Account rows are kept even when their counts are deferred.
+9. Select **Refresh Search** to rerun the same person and searched platforms. To change the person, context, or search scope, edit the form and select **Search**.
 
-Results persist during normal Streamlit reruns in your browser session. There is no persistent search cache or automatic background refresh. Closing the session or restarting the app clears its results. Stopping the app: press **Ctrl+C** in its terminal.
+Live coverage checks and their limitations are recorded in [validation/REPORT.md](validation/REPORT.md).
+
+The list includes namesakes and may include fan accounts. Compare the profile name, handle, and source link as well as follower count; a large count does not confirm identity.
+
+Results persist during normal Streamlit reruns in your browser session. There is no persistent search cache or automatic background refresh. A session-only follower cache reuses successful counts for up to 24 hours when discovery omits them, avoiding repeated account lookups; CSV records the original observation time, source, and an earlier-observation note. Every refresh still attempts fresh queries. Closing the session or restarting the app clears its results. Stopping the app: press **Ctrl+C** in its terminal.
 
 ### Results list and CSV
 
-The list contains **Rank, Platform, Profile Name, Profession, Company, Nationality, Followers, Follower Count Text, Match Status, Confidence, and Reference URL**. CSV additionally includes username, canonical profile URL, field-source URLs, search time, query inputs, follower precision notes, and search completeness/error information.
+The list contains **Rank, Platform, Profile Name, Followers, and Reference URL**, plus **Profession** and **Company** when LinkedIn is included. Instagram and X career fields stay blank in mixed-platform results. Social-only table views and CSV files omit career columns. CSV additionally includes username, canonical profile URL, field-source URLs, search time, query inputs, follower precision notes, and search completeness/error information.
 
-- Followers are numeric for ranking: `2K` becomes `2000`, and `1.2M` becomes `1200000`. Original text is kept separately; rounded, approximate, and lower-bound counts are labeled in CSV.
+- Followers are numeric for ranking: `2K` becomes `2000`, and `1.2M` becomes `1200000`. Rounded, approximate, and lower-bound counts are labeled in CSV.
 - Counts reflect public search indexes, not guaranteed current measurements. Connections, following, likes, and posts are never substituted for followers. Unknown counts stay blank and sort after known values, including zero.
-- Nationality is filled only from explicit Nationality/Citizenship text. Location and the search country field are not treated as nationality.
-- Profession and company come from attributable profile text. Missing information stays blank; search inputs and another platform's uncertain identity are not copied into profile facts.
+- X follower lookups query `x.com` only, using an exact-profile search followed by a handle-based search when needed. The legacy Twitter index is not queried. Indexed profile tabs (`with_replies`, `media`, `highlights`, and `reposts`) are merged into the same account. Instagram profile reels/tagged tabs are also supported. Individual posts and follower-list pages are excluded. Counts still depend on available public index text; missing data stays blank.
+- Profession and company are extracted from LinkedIn only. Missing information stays blank; search inputs and another platform's uncertain identity are not copied into profile facts.
 - Platforms with Search Failed or No Reliable Match retain status rows with blank profile fields.
 - CSV follows the **Sort by** dropdown. Clicking a table header only changes the temporary table display order.
 - CSV uses a UTF-8 BOM for Excel compatibility and escapes spreadsheet formula characters in untrusted text.
@@ -80,11 +85,11 @@ If some queries fail but others yield candidates, those candidates remain visibl
 
 ## 5. How it works
 
-1. **Search adapter:** `finder/search_engine.py` calls DDGS with `backend="auto"`, eight results per query, and an eight-second provider timeout. It attempts a query at most twice with a short exponential backoff. It distinguishes timeout, rate-limit, HTTP, connection, TLS, access-restriction, and generic provider errors. Access restrictions and TLS errors are not retried. The exact DDGS `No results found.` signal is treated as an empty search; wrapped HTTP/timeout errors remain failures. DDGS can contact multiple backends internally, so its timeout is not an overall search deadline.
-2. **Query builder:** LinkedIn searches the name broadly, then profession and organization independently, followed by an external reference search. Country supplies context when no profession or organization is supplied. One core-role fallback and up to two profile-scoped career lookups can fill missing details. Instagram and X retain three discovery queries, including legacy Twitter support. Up to two additional exact-profile metric queries per selected platform can fill missing follower data. Maximum logical query budgets are nine for LinkedIn and five each for Instagram/X. Optional conditions are never forced into every query.
-3. **Profile parser:** accepts personal LinkedIn `/in/` pages and single-handle Instagram/X pages. Rejects posts, reels, stories, searches, reserved routes, spoofed domains, and non-web URLs. Removes tracking parameters and combines X/Twitter aliases. Profile links originate in search results; handles are never guessed.
-4. **Identity matching:** full-name tokens and handles establish candidate identity clues. A profile-attributed LinkedIn job title and company receive more ranking weight than a matching username. Role matching distinguishes an exact profession from a compatible core role with missing seniority; “Creative Producer” never becomes “Senior Creative Producer” unless that text is returned by the index. Similar but different names and fan/parody wording are rejected. Candidates are sorted using an internal rule score; that score is not shown as an authenticity percentage. Professional details improve identity ranking but do not establish official account ownership.
-5. **Public references:** at most two eligible pages per platform are checked for direct profile links with local name attribution. The small source policy currently covers BBC, Reuters, AP, Olympics, UN, EU, and UK government domains. BBC's two domains count as one source. A reference must match the person's name in its indexed title and fetched page title/heading. Generic social footers do not count. Fetches honor `robots.txt`; redirects, restricted pages, non-HTML responses, and oversized pages are skipped. Social-platform pages are never fetched. Two independent source families are required for “Likely Official.”
+1. **Search adapter:** the UI's default service uses DDGS with an eight-second provider timeout, one adapter attempt per query, and up to twenty results. A completely failed social discovery gets one recovery query. The lower-level adapter still supports configurable retries. At most three provider calls run concurrently across selected platforms, discovery, and metric enrichment. Provider timeouts are not strict overall deadlines.
+2. **Query builder:** LinkedIn keeps profession/company discovery and career lookups. Instagram and X each run two independent name/metric queries; X queries `x.com` only. Social platforms skip external-reference searches and verification. One additional search excluding leading handles can uncover more namesakes. Initial follower lookups run in rounds, giving accounts a primary lookup before a handle fallback, within a twelve-second scheduling budget. **Fill missing Followers** continues the remaining work without this initial budget. Valid session observations avoid repeated lookups.
+3. **Profile parser:** accepts personal LinkedIn `/in/` pages and single-handle Instagram/X pages, plus the supported X profile tabs. Rejects posts, reels, stories, searches, reserved routes, spoofed domains, and non-web URLs. Removes tracking parameters and combines X/Twitter aliases. Profile links originate in search results; handles are never guessed.
+4. **Identity matching:** full-name tokens and handles establish candidate identity clues. A profile-attributed LinkedIn job title and company receive more ranking weight than a matching username. Role matching distinguishes an exact profession from a compatible core role with missing seniority; “Creative Producer” never becomes “Senior Creative Producer” unless that text is returned by the index. Different names remain excluded. Matching-name fan/parody/news accounts remain available for comparison, with internal ownership cautions; follower count alone never establishes identity. Candidates are sorted using an internal rule score; that score is not shown as an authenticity percentage. Professional details improve identity ranking but do not establish official account ownership.
+5. **Public references:** for LinkedIn only, at most two eligible pages are checked for direct profile links with local name attribution. The small source policy currently covers BBC, Reuters, AP, Olympics, UN, EU, and UK government domains. BBC's two domains count as one source. A reference must match the person's name in its indexed title and fetched page title/heading. Generic social footers do not count. Fetches honor `robots.txt`; redirects, restricted pages, non-HTML responses, and oversized pages are skipped. Social-platform pages are never fetched. Two independent source families are required for “Likely Official.”
 
 The search provider is behind a small `SearchProvider` contract, so another provider can replace DDGS without rewriting the UI or matching rules.
 
@@ -148,6 +153,8 @@ Run the optional real-network checks separately:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\live_search.py
+# Repeat Instagram/X coverage checks:
+.\.venv\Scripts\python.exe scripts\live_search.py "Leo Messi" "Taylor Swift" "Alex Morgan" "Cristiano Ronaldo" --platforms instagram x --repeat 2
 # Or check just one person:
 .\.venv\Scripts\python.exe scripts\live_search.py "Emma Watson"
 ```
@@ -178,7 +185,7 @@ Social Media Finder Tool/
     profile_parser.py            Strict profile URLs and deduplication
     identity_matcher.py          Evidence rules and candidate ranking
     linkedin_profile.py          Indexed LinkedIn role/company parsing and lookups
-    public_profile.py            Indexed follower/nationality parsing and metric queries
+    public_profile.py            Indexed follower parsing and metric queries
     export.py                    List rows, ranking, and CSV serialization
     public_evidence.py           Bounded public reference checks
     service.py                   Independent platform orchestration

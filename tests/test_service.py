@@ -13,7 +13,7 @@ def test_successful_empty_search_is_no_reliable_match():
     engine = Mock(search=lambda query: QueryRun(query))
     result = FinderService(engine).search_platform(Person("Alex Morgan"), Platform.X)
     assert result.status == MatchStatus.NONE
-    assert len(result.runs) == 3
+    assert len(result.runs) == 2
 
 
 def test_failure_does_not_break_other_platforms():
@@ -44,10 +44,10 @@ def test_partial_failure_preserves_candidates_with_warning():
 
 
 def test_verification_failure_does_not_discard_search_results():
-    engine = Mock(search=lambda query: QueryRun(query, hits=[SearchHit("Alex Morgan", "https://x.com/alexmorgan", "")]))
+    engine = Mock(search=lambda query: QueryRun(query, hits=[SearchHit("Alex Morgan", "https://www.linkedin.com/in/alexmorgan/", "")]))
     verifier = Mock()
     verifier.verify.side_effect = RuntimeError("Verification unavailable")
-    result = FinderService(engine, verifier).search_platform(Person("Alex Morgan"), Platform.X)
+    result = FinderService(engine, verifier).search_platform(Person("Alex Morgan"), Platform.LINKEDIN)
     assert result.status == MatchStatus.POSSIBLE
     assert "unavailable" in result.verification_notes[0]
 
@@ -58,4 +58,4 @@ def test_searches_are_never_cached():
     service = FinderService(engine)
     service.search_all(Person("Alex Morgan"))
     service.search_all(Person("Alex Morgan"))
-    assert engine.search.call_count == 18
+    assert engine.search.call_count == 14
