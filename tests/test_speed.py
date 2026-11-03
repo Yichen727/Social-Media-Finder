@@ -59,7 +59,7 @@ def test_selected_platforms_overlap_and_unselected_platforms_are_not_searched():
     assert requests.call_count == 2
 
 
-def test_budget_preserves_all_accounts_and_manual_fill_can_finish():
+def test_budget_preserves_all_accounts_and_refresh_can_complete_counts():
     clock = [0.0]
     lock = Lock()
     def search(query):
@@ -75,7 +75,7 @@ def test_budget_preserves_all_accounts_and_manual_fill_can_finish():
     assert len(result.candidates) == 8
     assert 0 < sum(c.follower_count is not None for c in result.candidates) < 8
     assert any(error.kind == "budget" for error in result.errors)
-    service.fill_missing_followers(Person("Alex Morgan"), result)
+    result = service.search_platform(Person("Alex Morgan"), Platform.X)
     assert all(c.follower_count == 2000 for c in result.candidates)
     assert not any(error.kind == "budget" for error in result.errors)
 
@@ -107,25 +107,25 @@ def test_social_only_ui_hides_career_inputs_and_columns():
     assert "Company" not in app.dataframe[0].value.columns
 
 
-def test_fill_button_enriches_existing_results_without_new_discovery():
+def test_missing_counts_do_not_add_extra_buttons_or_incomplete_warnings():
     from pathlib import Path
+    from finder.models import Query, SearchError
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py")).run()
     app.multiselect[0].set_value(["X / Twitter"]).run()
     app.text_input[0].set_value("Alex Morgan")
     result = PlatformResult(Platform.X, MatchStatus.POSSIBLE, candidates=[
         Candidate(Platform.X, "https://x.com/alex", "alex", "Alex Morgan")
-    ])
+    ], runs=[QueryRun(Query("Follower lookup budget", ""), error=SearchError(
+        "budget", "Some follower counts were unavailable within the search time budget.", "budget reached"))])
     with patch("finder.service.FinderService.search_platform", return_value=result):
         app.button[0].click().run()
-    def fill(person, existing):
-        existing.candidates[0].follower_count = 1234
-    with patch("finder.service.FinderService.search_platform") as discovery:
-        with patch("finder.service.FinderService.fill_missing_followers", side_effect=fill) as lookup:
-            next(button for button in app.button if button.label == "Fill missing Followers").click().run()
     assert not app.exception
-    discovery.assert_not_called()
-    assert lookup.call_count == 1
-    assert list(app.dataframe[0].value["Followers"]) == [1234]
+    assert not any(button.label == "Fill missing Followers" for button in app.button)
+    assert not any("incomplete" in warning.value.lower() for warning in app.warning)
+    app.radio[0].set_value("Profiles").run()
+    assert not app.exception
+    assert not any("incomplete" in warning.value.lower() for warning in app.warning)
+    assert not any("unavailable within" in caption.value for caption in app.caption)
 
 
 def test_complete_social_provider_failure_gets_one_recovery_attempt():

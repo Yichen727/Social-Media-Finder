@@ -82,7 +82,7 @@ class FinderService:
         result.candidates = rank_candidates(candidates, person)
         for candidate in result.candidates:
             populate_public_details(candidate, person)
-        self.fill_missing_followers(person, result, budget=self.metrics_budget)
+        self._populate_followers(person, result)
         # New index text may reveal career context or a fan/parody account.
         result.candidates = rank_candidates(result.candidates, person)
         if result.candidates:
@@ -100,15 +100,14 @@ class FinderService:
         with ThreadPoolExecutor(max_workers=3) as pool:
             return list(pool.map(self._run_query, queries))
 
-    def fill_missing_followers(self, person: Person, result: PlatformResult, budget: float | None = None):
-        """Use cached observations first; a manual fill can run without a time budget."""
-        result.runs = [run for run in result.runs if not (run.error and run.error.kind == "budget")]
+    def _populate_followers(self, person: Person, result: PlatformResult):
+        """Populate followers automatically within the search budget."""
         self._remember_followers(result.candidates, reuse_only=True)
-        deadline = monotonic() + budget if budget is not None else None
+        deadline = monotonic() + self.metrics_budget
         attempts = {Platform.LINKEDIN: 1, Platform.INSTAGRAM: 2, Platform.X: 2}
         for fallback in range(attempts[result.platform]):
             missing = [candidate for candidate in result.candidates if candidate.follower_count is None]
-            if not missing or deadline is not None and monotonic() >= deadline:
+            if not missing or monotonic() >= deadline:
                 break
             with ThreadPoolExecutor(max_workers=3) as pool:
                 runs = pool.map(lambda candidate: self._lookup_followers(person, candidate, fallback, deadline), missing)
@@ -117,16 +116,16 @@ class FinderService:
             if any(run.error and run.error.kind in {"access", "rate_limit", "tls"}
                    for run in round_runs):
                 break
-        if deadline is not None and monotonic() >= deadline and any(c.follower_count is None for c in result.candidates):
+        if monotonic() >= deadline and any(c.follower_count is None for c in result.candidates):
             result.runs.append(QueryRun(Query("Follower lookup budget", ""), error=SearchError(
-                "budget", "Some follower lookups were deferred. Use Fill missing Followers to continue.",
+                "budget", "Some follower counts were unavailable within the search time budget.",
                 "The initial follower lookup budget was reached; account rows are preserved.")))
         self._remember_followers(result.candidates)
 
     def _lookup_followers(self, person, candidate, fallback, deadline):
         # Check again after acquiring a slot so queued work cannot outlive the budget.
         with self._network_slots:
-            if deadline is not None and monotonic() >= deadline:
+            if monotonic() >= deadline:
                 return None
             query = build_metrics_query(person, candidate, fallback=fallback)
             try:

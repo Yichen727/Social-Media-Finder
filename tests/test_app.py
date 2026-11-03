@@ -75,7 +75,7 @@ def test_candidate_links_and_failure_details_are_available():
     assert not app.exception
     assert any(element.value == "https://x.com/alexmorgan" for element in app.text)
     assert any("TimeoutError: timeout" in element.value for element in app.text)
-    assert any("incomplete" in warning.value for warning in app.warning)
+    assert not any("incomplete" in warning.value.lower() for warning in app.warning)
     assert any(button.proto.url == "https://x.com/alexmorgan" for button in app.get("link_button"))
 
 

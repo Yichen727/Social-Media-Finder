@@ -36,11 +36,6 @@ def render_result(result: PlatformResult, person: Person):
             st.write("The searches completed, but no candidate had enough supporting evidence.")
         elif result.status == MatchStatus.FAILED:
             st.write("A search request failed, so we cannot determine whether a reliable profile exists.")
-        if result.partial:
-            st.warning("Some queries failed. The available results may be incomplete.")
-        if result.errors:
-            for message in dict.fromkeys(error.message for error in result.errors):
-                st.caption(message)
         for index, candidate in enumerate(result.candidates):
             if index:
                 st.divider()
@@ -53,8 +48,8 @@ def render_result(result: PlatformResult, person: Person):
             st.text(candidate.url)
             st.link_button("Open profile", candidate.url, use_container_width=True)
         with st.expander("Search queries & manual search"):
-            runs = {run.query.text: run for run in result.runs}
-            queries = [run.query for run in result.runs] or build_queries(person, result.platform)
+            runs = {run.query.text: run for run in result.runs if run.query.text}
+            queries = [run.query for run in result.runs if run.query.text] or build_queries(person, result.platform)
             for query in queries:
                 st.caption(query.stage)
                 st.code(query.text, language=None, wrap_lines=True)
@@ -152,13 +147,6 @@ if "searched_person" in st.session_state:
         st.caption(f"Last search: {max(dates)} · UTC")
     if "list_platforms" not in st.session_state:
         st.session_state.list_platforms = [platform.value for platform in results]
-    if any(candidate.follower_count is None for result in results.values() for candidate in result.candidates):
-        if st.button("Fill missing Followers", help="Continue follower lookups without repeating profile discovery."):
-            service = FinderService(follower_cache=st.session_state.setdefault("follower_cache", {}))
-            with st.spinner("Looking up missing follower counts…"):
-                for result in results.values():
-                    service.fill_missing_followers(person, result)
-            st.rerun()
     controls = st.columns([2, 2, 1])
     visible_names = controls[0].multiselect(
         "Platforms in list", [platform.value for platform in results],
@@ -176,8 +164,6 @@ if "searched_person" in st.session_state:
         st.info("Select a platform to view or export results.")
     elif view == "List":
         for platform in visible_platforms:
-            if results[platform].partial:
-                st.warning(f"{platform.value}: some queries failed. Results may be incomplete.")
             if results[platform].status == MatchStatus.FAILED:
                 st.error(f"{platform.value}: search failed. Try Refresh Search.")
             elif results[platform].status == MatchStatus.NONE:

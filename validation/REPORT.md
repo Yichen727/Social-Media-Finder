@@ -1,3 +1,5 @@
+> UI update (3 November 2026): manual follower-fill controls and partial-search warning banners were removed. Follower extraction remains automatic and bounded; README is now a short user guide. The performance measurements below predate this UI cleanup.
+
 # Search performance update — 3 November 2026
 
 **195 tests passed in 4.51 seconds.** The checks cover concurrent discovery/platform execution, bounded initial follower enrichment, manual continuation, cached metric reuse, X-only search scope, and LinkedIn-only career parsing/queries/table/CSV fields.
