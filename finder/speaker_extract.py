@@ -49,7 +49,6 @@ class NameMention:
     evidence: str
     paragraph: int
     timestamp: str = ""
-    speaker_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -62,7 +61,6 @@ class Detection:
     path: Path | None = None
     paragraph: int | None = None
     timestamp: str = ""
-    speaker_label: str = ""
     mentions: tuple[NameMention, ...] = ()
     requires_review: bool = False
 
@@ -102,8 +100,6 @@ class TranscriptParagraph:
     index: int
     text: str
     timestamp: str = ""
-    seconds: int | None = None
-    speaker_label: str = ""
 
 
 def _normalized(text: str) -> str:
@@ -362,13 +358,8 @@ def _mention_names(text: str):
     return sorted(found)
 
 
-def extract_transcript(paragraphs: tuple[TranscriptParagraph, ...], path: Path | None = None,
-                       *, session_context: str = "") -> Detection:
-    """Collect opening name mentions, regardless of participation or main role.
-
-    session_context remains accepted for existing callers; it no longer rejects
-    moderator/panel mentions. Names are candidates, not verified identities.
-    """
+def extract_transcript(paragraphs: tuple[TranscriptParagraph, ...], path: Path | None = None) -> Detection:
+    """Collect opening name candidates, regardless of participation or main role."""
     source = "transcript"
     if not paragraphs:
         return Detection(source, "unavailable", reason="The transcript opening contains no usable text.", path=path)
@@ -379,7 +370,7 @@ def extract_transcript(paragraphs: tuple[TranscriptParagraph, ...], path: Path |
             continue
         for _, name in _mention_names(text):
             mentions.setdefault(name.casefold(), NameMention(name, paragraph.text, paragraph.index,
-                                                           paragraph.timestamp, paragraph.speaker_label))
+                                                           paragraph.timestamp))
     if not mentions:
         return Detection(source, "not_found", reason="No supported name candidates were found in the opening.", path=path)
     evidence = tuple(mentions.values())
@@ -388,7 +379,7 @@ def extract_transcript(paragraphs: tuple[TranscriptParagraph, ...], path: Path |
     return Detection(source, "found", "; ".join(mention.name for mention in evidence), excerpts,
                      reason="Transcript name mentions require manual review; participation is not verified.",
                      path=path, paragraph=first.paragraph, timestamp=first.timestamp,
-                     speaker_label=first.speaker_label, mentions=evidence, requires_review=True)
+                     mentions=evidence, requires_review=True)
 
 
 class SpeakerExtractor:
@@ -449,8 +440,7 @@ class SpeakerExtractor:
                                 or characters + len(spoken) > self.max_chars):
                             stop = True
                             break  # Never manufacture a name from a cut-off paragraph.
-                        paragraphs.append(TranscriptParagraph(index, unicodedata.normalize("NFC", spoken), timestamp,
-                                                              seconds, label[1] if label else ""))
+                        paragraphs.append(TranscriptParagraph(index, unicodedata.normalize("NFC", spoken), timestamp))
                         characters += len(spoken)
                     if stop:
                         break
@@ -458,7 +448,7 @@ class SpeakerExtractor:
         self._opening_cache[path] = (version, result)
         return result
 
-    def extract_transcript(self, path: Path, *, session_context: str = "") -> Detection:
+    def extract_transcript(self, path: Path) -> Detection:
         try:
             return extract_transcript(self.read_opening(path), Path(path))
         except (OSError, BadZipFile, KeyError, ET.ParseError, RuntimeError, ValueError) as exc:

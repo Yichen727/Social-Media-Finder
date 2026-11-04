@@ -15,20 +15,20 @@ def classify_error(exc: Exception) -> SearchError:
     detail = f"{type(exc).__name__}: {exc}"
     lower = detail.lower()
     if any(word in lower for word in ("captcha", "challenge", "403", "forbidden", "blocked")):
-        kind, message = "access", "The search provider restricted automated access. Try the manual search link."
+        kind = "access"
     elif any(word in lower for word in ("ratelimit", "rate limit", "429", "too many requests", "202")):
-        kind, message = "rate_limit", "The search provider is limiting requests. Wait before refreshing."
+        kind = "rate_limit"
     elif isinstance(exc, TimeoutError) or any(word in lower for word in ("timeout", "timed out")):
-        kind, message = "timeout", "The search provider timed out. Try again later."
+        kind = "timeout"
     elif any(word in lower for word in ("certificate", "ssl", "tls")):
-        kind, message = "tls", "A secure connection could not be established. Check your network or company proxy."
+        kind = "tls"
     elif any(word in lower for word in ("connect", "resolve", "dns", "network", "socket")):
-        kind, message = "network", "The search provider could not be reached. Check your internet connection."
+        kind = "network"
     elif any(word in lower for word in ("httperror", "httpstatuserror", "http error", "http status", "status code", "http 4", "http 5")):
-        kind, message = "http", "The search provider returned an HTTP error. Try again later."
+        kind = "http"
     else:
-        kind, message = "provider", "The search provider could not complete this query. Try the manual search link."
-    return SearchError(kind, message, detail[:2000])
+        kind = "provider"
+    return SearchError(kind, detail[:2000])
 
 
 class DDGSSearchEngine:

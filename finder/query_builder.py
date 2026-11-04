@@ -24,8 +24,6 @@ def build_queries(person: Person, platform: Platform) -> list[Query]:
         contexts = list(dict.fromkeys(
             search_term(value) for value in (person.profession, person.organization) if value
         ))
-        if not contexts and person.country:
-            contexts = [search_term(person.country)]
         for context in contexts:
             queries.append(Query("Contextual search", f"{scope} {name} {context}"))
         if not contexts:

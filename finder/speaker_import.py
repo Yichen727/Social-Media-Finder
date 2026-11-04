@@ -51,10 +51,6 @@ class SpeakerRow:
     def eligible(self) -> bool:
         return self.reference is not None and self.issue is None
 
-    @property
-    def needs_speaker(self) -> bool:
-        return self.eligible and not self.has_speaker
-
 
 @dataclass(frozen=True)
 class SpeakerCSV:
@@ -71,18 +67,6 @@ class SpeakerCSV:
     @property
     def eligible_rows(self) -> tuple[SpeakerRow, ...]:
         return tuple(row for row in self.rows if row.eligible)
-
-    @property
-    def pending_rows(self) -> tuple[SpeakerRow, ...]:
-        return tuple(row for row in self.rows if row.needs_speaker)
-
-    def to_csv_bytes(self) -> bytes:
-        """Round-trip source values in the detected input encoding; never write a file."""
-        output = io.StringIO(newline="")
-        writer = csv.writer(output, delimiter=self.delimiter, lineterminator="\r\n")
-        writer.writerow(self.headers)
-        writer.writerows(row.cells for row in self.rows)
-        return self.encode_csv(output.getvalue())
 
     def encode_csv(self, text: str) -> bytes:
         """Retain the source encoding, including UTF-8 BOM and UTF-16 byte order."""

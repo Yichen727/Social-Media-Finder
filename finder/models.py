@@ -24,10 +24,9 @@ class Person:
     full_name: str
     profession: str = ""
     organization: str = ""
-    country: str = ""
 
     def __post_init__(self):
-        for name in ("full_name", "profession", "organization", "country"):
+        for name in ("full_name", "profession", "organization"):
             value = " ".join(getattr(self, name).split())
             if len(value) > 160:
                 raise ValueError("Please keep each field to 160 characters or fewer.")
@@ -52,7 +51,6 @@ class SearchHit:
 @dataclass(frozen=True)
 class SearchError:
     kind: str
-    message: str
     detail: str
 
 
@@ -79,20 +77,14 @@ class Candidate:
     profile_name: str = ""
     hits: list[SearchHit] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
-    cautions: list[str] = field(default_factory=list)
     score: int = 0
     status: MatchStatus = MatchStatus.POSSIBLE
-    confidence: str = "Low"
-    headline: str = ""
     job_title: str = ""
     company: str = ""
     professional_evidence: list[Evidence] = field(default_factory=list)
-    nationality: str = ""
     follower_count: int | None = None
-    follower_display: str = ""
     follower_note: str = ""
     follower_source: str = ""
-    nationality_source: str = ""
     follower_observed_at: str = ""
 
 

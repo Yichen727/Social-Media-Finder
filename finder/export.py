@@ -40,7 +40,7 @@ def result_rows(person: Person, results: Iterable[PlatformResult],
         base = {column: "" for column in COLUMNS}
         base.update({
             "Rank": None, "Platform": result.platform.value, "Followers": None,
-            "Match Status": result.status.value, "Search Time UTC": result.searched_at,
+            "Search Time UTC": result.searched_at,
             "Search Incomplete": result.partial, "Search Error Count": len(result.errors),
             "Search Name": person.full_name, "Search Profession": person.profession if career else "",
             "Search Company": person.organization if career else "",
@@ -58,7 +58,7 @@ def result_rows(person: Person, results: Iterable[PlatformResult],
                          "Profession Source URL": _professional_source(candidate, "Job title") if career else "",
                          "Company Source URL": _professional_source(candidate, "Company") if career else ""})
         if not result.candidates:
-            # Include status rows so an empty or failed platform is not silently omitted.
+            # Keep an empty row for platforms without candidates.
             rows.append(base)
     return rows
 

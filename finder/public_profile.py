@@ -22,7 +22,6 @@ SCALES = {"": 1, "k": 1000, "thousand": 1000, "m": 1000000,
 @dataclass(frozen=True)
 class FollowerCount:
     count: int
-    display: str
     note: str
 
 
@@ -48,10 +47,7 @@ def parse_followers(text: str, platform: Platform | None = None) -> FollowerCoun
                 note = "Lower bound"
             elif modifier:
                 note = "Approximate"
-            display = match["number"] + (match["unit"] or "") + (match["plus"] or "")
-            if modifier:
-                display = modifier[1] + " " + display
-            return FollowerCount(int(value), display, note)
+            return FollowerCount(int(value), note)
     return None
 
 
@@ -70,12 +66,11 @@ def profile_introduction(text: str, full_name: str) -> str:
 
 
 def populate_public_details(candidate: Candidate, person: Person) -> Candidate:
-    candidate.nationality = candidate.nationality_source = ""
     if candidate.platform != Platform.LINKEDIN:
-        candidate.headline = candidate.job_title = candidate.company = ""
+        candidate.job_title = candidate.company = ""
         candidate.professional_evidence = []
     candidate.follower_count = None
-    candidate.follower_display = candidate.follower_note = candidate.follower_source = ""
+    candidate.follower_note = candidate.follower_source = ""
     for hit in candidate.hits:
         parsed = normalize_profile_url(hit.url)
         if not parsed or parsed[1] != candidate.url:
@@ -97,7 +92,6 @@ def populate_public_details(candidate: Candidate, person: Person) -> Candidate:
         if count and (candidate.follower_count is None
                       or count.note == "Indexed count" and candidate.follower_note != "Indexed count"):
             candidate.follower_count = count.count
-            candidate.follower_display = count.display
             candidate.follower_note = count.note
             candidate.follower_source = hit.url
     return candidate

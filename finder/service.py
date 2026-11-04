@@ -118,7 +118,7 @@ class FinderService:
                 break
         if monotonic() >= deadline and any(c.follower_count is None for c in result.candidates):
             result.runs.append(QueryRun(Query("Follower lookup budget", ""), error=SearchError(
-                "budget", "Some follower counts were unavailable within the search time budget.",
+                "budget",
                 "The initial follower lookup budget was reached; account rows are preserved.")))
         self._remember_followers(result.candidates)
 
@@ -141,7 +141,7 @@ class FinderService:
 
     def _remember_followers(self, candidates: list[Candidate], reuse_only: bool = False):
         now = datetime.now(timezone.utc)
-        fields = ("follower_count", "follower_display", "follower_note", "follower_source")
+        fields = ("follower_count", "follower_note", "follower_source")
         for candidate in candidates:
             if candidate.follower_count is not None:
                 if reuse_only or candidate.follower_observed_at:
@@ -155,8 +155,8 @@ class FinderService:
                 saved = self.follower_cache.get(candidate.url)
                 if not saved or now - datetime.fromisoformat(saved["follower_observed_at"]) > timedelta(hours=24):
                     continue
-                for field, value in saved.items():
-                    setattr(candidate, field, value)
+                for field in (*fields, "follower_observed_at"):
+                    setattr(candidate, field, saved[field])
                 candidate.follower_note += f"; Earlier observation ({candidate.follower_observed_at})"
 
     def search_selected(self, person: Person, platforms):
@@ -167,7 +167,3 @@ class FinderService:
             pending = {pool.submit(self.search_platform, person, platform): platform for platform in platforms}
             for future in as_completed(pending):
                 yield future.result()
-
-    def search_all(self, person: Person) -> list[PlatformResult]:
-        results = {result.platform: result for result in self.search_selected(person, Platform)}
-        return [results[platform] for platform in Platform]

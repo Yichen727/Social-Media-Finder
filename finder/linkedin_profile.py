@@ -135,15 +135,15 @@ def extract_career_details(hit: SearchHit, full_name: str) -> CareerDetails:
 def populate_career_details(candidate: Candidate, person: Person) -> Candidate:
     if candidate.platform != Platform.LINKEDIN:
         return candidate
-    candidate.headline = candidate.job_title = candidate.company = ""
+    candidate.job_title = candidate.company = ""
     candidate.professional_evidence = []
     for hit in candidate.hits:
         details = extract_career_details(hit, person.full_name)
-        for field in ("headline", "job_title", "company"):
+        for field in ("job_title", "company"):
             value = getattr(details, field)
             if value and not getattr(candidate, field):
                 setattr(candidate, field, value)
-                label = {"headline": "Headline", "job_title": "Job title", "company": "Company"}[field]
+                label = {"job_title": "Job title", "company": "Company"}[field]
                 candidate.professional_evidence.append(
                     Evidence(f"{label} from the public LinkedIn search index: {value}.", hit.url)
                 )

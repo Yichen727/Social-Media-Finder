@@ -154,7 +154,6 @@ def render_speaker_workspace():
     # editor resets its deltas and can lose alternating edits.
     if editor_key not in st.session_state:
         state["editor_base"] = _visible_review_rows(review, state.get("need_review_filter", False))
-    state["editor_key"] = editor_key
     if state["editor_base"]:
         edited = st.data_editor(
             state["editor_base"], key=editor_key, hide_index=True, num_rows="fixed", use_container_width=True,

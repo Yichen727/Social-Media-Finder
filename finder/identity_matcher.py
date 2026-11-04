@@ -1,4 +1,4 @@
-"""Conservative rule-based ranking. Confidence is evidence quality, not probability."""
+"""Conservative profile ranking using name, career and reference evidence."""
 
 import re
 import unicodedata
@@ -32,10 +32,9 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
         populate_career_details(candidate, person)
     else:
         person = Person(person.full_name)
-        candidate.headline = candidate.job_title = candidate.company = ""
+        candidate.job_title = candidate.company = ""
         candidate.professional_evidence = []
     candidate.evidence = [e for e in candidate.evidence if e.strength == "strong"]
-    candidate.cautions = []
     score = 0
     title_match = any(contains_name(hit.title, person.full_name) for hit in candidate.hits)
     snippet_match = any(contains_name(hit.snippet, person.full_name) for hit in candidate.hits)
@@ -53,13 +52,10 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
         score += 8
         candidate.evidence.append(Evidence("A search snippet contains the full name.", source))
     text = " ".join(f"{hit.title} {hit.snippet}" for hit in candidate.hits)
-    for label, value in (("Profession", person.profession), ("Organization", person.organization),
-                         ("Country / nationality", person.country)):
+    for label, value in (("Profession", person.profession), ("Organization", person.organization)):
         if value and contains_name(text, value):
             score += 8
             candidate.evidence.append(Evidence(f"{label} appears in the indexed text: {value}.", source))
-        elif value:
-            candidate.cautions.append(f"{label} was not corroborated by the search snippets.")
     # A structured, profile-attributed role/company outweighs a namesake's neat handle.
     # Career context improves identity ranking, never the ownership/officialness gate.
     if person.profession and candidate.job_title:
@@ -70,10 +66,6 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
                 evidence for evidence in candidate.professional_evidence
                 if evidence.description.startswith("Job title")
             )
-            if role_match == "compatible":
-                candidate.cautions.append("The indexed role matches, but the requested seniority was not confirmed.")
-        else:
-            candidate.cautions.append("The indexed job title differs from the requested profession.")
     if person.organization and candidate.company and contains_name(candidate.company, person.organization):
         score += 28
         candidate.evidence.extend(
@@ -92,11 +84,9 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
         fan = True
     if fan:
         score -= 100
-        candidate.cautions.append("Fan, parody, tribute, news/archive, or impersonation wording was found.")
     identity_supported = title_match or (handle_match and snippet_match) or bool(strong)
     if not identity_supported:
         score = min(score, 10)
-        candidate.cautions.append("The full name could not be tied to this profile.")
     candidate.score = score
     # Two separately fetched reference domains are required; self-described 'official'
     # wording and search ranking never qualify as strong evidence.
@@ -106,11 +96,8 @@ def rank_candidate(candidate: Candidate, person: Person) -> Candidate:
     families.discard(None)
     if len(families) >= 2 and identity_supported and not fan:
         candidate.status = MatchStatus.LIKELY
-        candidate.confidence = "High"
     else:
         candidate.status = MatchStatus.POSSIBLE
-        candidate.confidence = "Medium" if score >= 48 and identity_supported and not fan else "Low"
-        candidate.cautions.append("Account ownership is unconfirmed; indexed text may be incomplete or outdated.")
     return candidate
 
 
