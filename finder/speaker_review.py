@@ -82,3 +82,9 @@ class SpeakerReview:
                 cells[speaker_index] = self.approved[row.row_id]
             writer.writerow(cells)
         return self.table.encode_csv(output.getvalue())
+
+    def export_xlsx(self) -> bytes:
+        if not self.ready:
+            raise ValueError("Apply reviewed changes before downloading the completed XLSX.")
+        from finder.speaker_excel import export_speaker_xlsx
+        return export_speaker_xlsx(self.table, self.approved)

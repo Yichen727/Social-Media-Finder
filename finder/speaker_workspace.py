@@ -1,4 +1,4 @@
-"""Compact Streamlit workspace for speaker review and completed-CSV download."""
+"""Compact Streamlit workspace for speaker review and CSV/XLSX download."""
 
 import hashlib
 from pathlib import Path
@@ -6,6 +6,7 @@ from pathlib import Path
 import streamlit as st
 
 from finder.speaker_extract import SpeakerExtractor
+from finder.speaker_excel import XLSX_MIME, SpeakerXLSX, load_speaker_xlsx, xlsx_sheet_names
 from finder.speaker_import import SpeakerCSV, SpeakerImportError, TranscriptIndex, load_speaker_csv
 from finder.speaker_review import SpeakerReview
 
@@ -22,7 +23,7 @@ def _visible_review_rows(review: SpeakerReview, need_review: bool) -> list[dict]
 def _forget_removed_upload():
     if st.session_state.get("speaker_csv") is None:
         state = st.session_state.get("speaker_workspace", {})
-        for key in ("data", "filename", "token", "review", "editor_base", "extractor"):
+        for key in ("data", "filename", "token", "review", "editor_base", "extractor", "xlsx_token", "sheet_names", "worksheet_name"):
             state.pop(key, None)
         state["generation"] = state.get("generation", 0) + 1
 
@@ -67,26 +68,50 @@ def _evidence(review: SpeakerReview, generation: int):
 
 def render_speaker_workspace():
     state = st.session_state.setdefault("speaker_workspace", {})
-    st.caption("Fill speakers for numbered talks, review names, and download your CSV.")
-    uploaded = st.file_uploader("Content CSV", type=["csv"], key="speaker_csv", on_change=_forget_removed_upload)
+    st.caption("Fill speakers for numbered talks, review names, and export CSV or XLSX.")
+    uploaded = st.file_uploader("Content CSV or XLSX", type=["csv", "xlsx"], key="speaker_csv", on_change=_forget_removed_upload)
     st.session_state.setdefault("speaker_folder", state.get("folder", ""))
     folder = st.text_input("Transcript folder", key="speaker_folder",
                            placeholder=r"e.g. C:\Content\TRANSCRIPTS V2",
                            help="Optional local folder on the machine running this app. Extract the ZIP first.")
     state["folder"] = folder
     options = ("Auto",) * 3
-    state["options"] = options
     if uploaded is not None:
         state["data"] = uploaded.getvalue()
         state["filename"] = Path(uploaded.name).name
     if "data" not in state:
-        st.info("Upload a CSV to start.")
+        st.info("Upload a CSV or XLSX to start.")
         return
+    is_xlsx = Path(state["filename"]).suffix.lower() == ".xlsx"
+    worksheet = None
+    if is_xlsx:
+        source_token = hashlib.sha256(state["data"]).hexdigest()
+        try:
+            if state.get("xlsx_token") != source_token:
+                state["sheet_names"] = xlsx_sheet_names(state["data"])
+                state["xlsx_token"] = source_token
+            sheets = state["sheet_names"]
+            if len(sheets) > 1:
+                previous_sheet = state.get("worksheet_name")
+                worksheet = st.selectbox(
+                    "Worksheet", sheets, index=sheets.index(previous_sheet) if previous_sheet in sheets else 0,
+                    key=f"speaker_worksheet_{source_token}", help="Changing the worksheet starts a new review.",
+                )
+            else:
+                worksheet = sheets[0]
+            state["worksheet_name"] = worksheet
+            options = ("XLSX", worksheet)
+        except SpeakerImportError as exc:
+            st.error(str(exc))
+            return
     token = hashlib.sha256(state["data"] + repr(options).encode()).hexdigest()
     previous = state.get("review")
-    if token != state.get("token") or not isinstance(previous.table if previous else None, SpeakerCSV):
+    previous_token = state.get("token")
+    previous_table = previous.table if previous else None
+    if (token != previous_token or not isinstance(previous_table, SpeakerCSV)
+            or is_xlsx and not isinstance(previous_table, SpeakerXLSX)):
         try:
-            table = load_speaker_csv(state["data"])
+            table = load_speaker_xlsx(state["data"], worksheet=worksheet) if is_xlsx else load_speaker_csv(state["data"])
         except SpeakerImportError as exc:
             st.error(str(exc))
             return
@@ -97,16 +122,20 @@ def render_speaker_workspace():
             state["review"].approved = previous.approved
         state["token"] = token
         state["generation"] = state.get("generation", 0) + 1
+        if not previous or token != previous_token:
+            state["export_format"] = "XLSX" if is_xlsx else "CSV"
+            st.session_state["speaker_export_format"] = state["export_format"]
     review = state["review"]
     if not isinstance(review, SpeakerReview):
         # Migrate state retained across a source-code reload without losing edits.
         review = SpeakerReview(review.table, dict(review.proposals), dict(review.edits), review.approved)
         state["review"] = review
         state["generation"] += 1
+    source_label = f"XLSX · {review.table.worksheet_name}" if isinstance(review.table, SpeakerXLSX) else review.table.encoding
     st.caption(f"{state['filename']} · {len(review.table.eligible_rows)} numbered talks · "
-               f"{len(review.table.rows)} total rows · {review.table.encoding}")
+               f"{len(review.table.rows)} total rows · {source_label}")
     if not review.table.eligible_rows:
-        st.info("No eligible numbered talks found. Check Ref Number; duplicate references need to be resolved in the source CSV.")
+        st.info("No eligible numbered talks found. Check Ref Number; duplicate references need to be resolved in the source table.")
         return
     actions = st.columns([1, 1, 3])
     find = actions[0].button("Find speakers", type="primary", key="find_speakers", use_container_width=True)
@@ -171,17 +200,23 @@ def render_speaker_workspace():
     if st.button("Apply reviewed changes", key="approve_speakers", disabled=review.ready):
         review.approve()
         st.rerun()
+    st.session_state.setdefault("speaker_export_format", state.get("export_format", "XLSX" if is_xlsx else "CSV"))
+    export_format = st.selectbox("Export format", ["CSV", "XLSX"], key="speaker_export_format")
+    state["export_format"] = export_format
     if review.ready:
-        st.caption("Review applied. The download contains every source row and column.")
+        st.caption("Review applied. The download contains every row and column from the reviewed table.")
     download = None
     if review.ready:
         try:
-            download = review.export_csv()
+            download = review.export_xlsx() if export_format == "XLSX" else review.export_csv()
         except UnicodeEncodeError:
             st.error(f"Some reviewed names cannot be saved as {review.table.encoding}. "
                      "Edit those names or upload a UTF-8 copy of the source CSV.")
-    st.download_button("Download completed CSV", data=download if download is not None else b"",
-                       file_name=f"{Path(state['filename']).stem}_speakers_filled.csv", mime="text/csv",
+        except ValueError as exc:
+            st.error(str(exc))
+    st.download_button(f"Download completed {export_format}", data=download if download is not None else b"",
+                       file_name=f"{Path(state['filename']).stem}_speakers_filled.{export_format.lower()}",
+                       mime=XLSX_MIME if export_format == "XLSX" else "text/csv",
                        disabled=download is None, key="download_speakers")
 
     # Keep button actions above this refresh so a simultaneous cell edit cannot

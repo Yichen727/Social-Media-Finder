@@ -460,7 +460,7 @@ class SpeakerExtractor:
 
     def extract_transcript(self, path: Path, *, session_context: str = "") -> Detection:
         try:
-            return extract_transcript(self.read_opening(path), Path(path), session_context=session_context)
+            return extract_transcript(self.read_opening(path), Path(path))
         except (OSError, BadZipFile, KeyError, ET.ParseError, RuntimeError, ValueError) as exc:
             return Detection("transcript", "unavailable", reason=f"The transcript could not be read: {exc}", path=Path(path))
 
@@ -482,8 +482,7 @@ class SpeakerExtractor:
             result = Detection("transcript", "unavailable", reason="No transcript folder was provided.")
         else:
             match = self.transcripts.lookup(row.reference)
-            context = "\n".join(values.get(column, "") for column in (table.video_name_column, table.caption_column))
-            result = self.extract_transcript(match.path, session_context=context) if match.path else Detection(
+            result = self.extract_transcript(match.path) if match.path else Detection(
                 "transcript", "unavailable", reason=match.message)
         attempts.append(result)
         status = "found" if result.status == "found" else "unresolved"

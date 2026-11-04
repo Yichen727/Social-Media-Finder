@@ -2,6 +2,8 @@
 
 Status: milestones 1–3 completed, 3 November 2026. CSV import, ordered main-speaker proposals, and the Speakers review/edit/export workspace are implemented. Social-search handoff remains planned. The supplied CSV/DOCX files are unchanged.
 
+Spreadsheet extension, 4 November 2026: Speakers Detection now accepts CSV and XLSX, with visible worksheet selection for Excel uploads. Review approval and ordered extraction are shared by both formats. Export format is selectable as CSV or XLSX independently of the input format. XLSX export from a workbook patches approved speaker cells in the selected worksheet while retaining the other workbook parts; CSV export covers the selected table. Source files remain unchanged. Added regression cases and static syntax checks; execution is left to the user under the existing testing preference. Earlier verification counts below are historical.
+
 ## 1. Confirmed requirements
 
 Deliver two stages:
