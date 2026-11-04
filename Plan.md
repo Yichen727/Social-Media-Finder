@@ -130,6 +130,8 @@ Show one marker legend and evidence on demand. Users can edit or remove candidat
 
 ### 3.7 Review and completed CSV
 
+The **Need Review** checkbox filters the editable preview to rows whose current `Speakers` value is blank/whitespace or contains `*`. It defaults off, preserves edits by source row ID, and never changes the export scope. Completed rows disappear from the filtered view after editing. Milestone 4 handoff is deferred at the user’s request; this update adds only the review filter. No tests were run for this update.
+
 Keep the preview concise: `Ref Number`, `High-res video name`, and editable `Speakers`. Show the winning source and supporting excerpt for a selected row on demand. Do not add visible confidence scores or repeated warning banners.
 
 Keep original and proposed values separate; allow edits and clearing proposals. Do not discard user edits when rerunning the same upload without an explicit reset.

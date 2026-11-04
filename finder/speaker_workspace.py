@@ -12,6 +12,13 @@ from finder.speaker_review import SpeakerReview
 SOURCE_LABELS = {"video_title": "High-res video name", "youtube_caption": "YouTube Caption", "transcript": "Transcript"}
 
 
+def _visible_review_rows(review: SpeakerReview, need_review: bool) -> list[dict]:
+    rows = review.editor_rows()
+    if need_review:
+        rows = [row for row in rows if not row["Speakers"].strip() or "*" in row["Speakers"]]
+    return rows
+
+
 def _forget_removed_upload():
     if st.session_state.get("speaker_csv") is None:
         state = st.session_state.get("speaker_workspace", {})
@@ -73,7 +80,7 @@ def render_speaker_workspace():
         state["data"] = uploaded.getvalue()
         state["filename"] = Path(uploaded.name).name
     if "data" not in state:
-        st.info("Upload a CSV to start. Rows with numeric Ref Number values are processed.")
+        st.info("Upload a CSV to start.")
         return
     token = hashlib.sha256(state["data"] + repr(options).encode()).hexdigest()
     previous = state.get("review")
@@ -109,21 +116,32 @@ def render_speaker_workspace():
     st.caption("Edit or clear names, then apply reviewed changes to enable download. Existing values are kept by default.")
     if any(getattr(proposal.detection, "requires_review", False) for proposal in review.proposals.values()):
         st.caption("* = name mentioned in a transcript; may be a host or someone mentioned in passing. Remove * after checking.")
+    st.session_state.setdefault("speaker_need_review", state.get("need_review_filter", False))
+    need_review = st.checkbox("Need Review", key="speaker_need_review",
+                              help="Show only blank Speakers cells or names containing *.")
     generation = state["generation"]
     editor_key = f"speaker_editor_{generation}"
     # Freeze widget input while editing. Feeding edited data back into the same
     # editor resets its deltas and can lose alternating edits.
     if editor_key not in st.session_state:
-        state["editor_base"] = review.editor_rows()
+        state["editor_base"] = _visible_review_rows(review, state.get("need_review_filter", False))
     state["editor_key"] = editor_key
-    edited = st.data_editor(
-        state["editor_base"], key=editor_key, hide_index=True, num_rows="fixed", use_container_width=True,
-        column_order=["Ref Number", "High-res video name", "Speakers"],
-        disabled=["_row_id", "Ref Number", "High-res video name"],
-        column_config={"_row_id": None, "Speakers": st.column_config.TextColumn("Speakers", width="medium"),
-                       "High-res video name": st.column_config.TextColumn(width="large")},
-    )
+    if state["editor_base"]:
+        edited = st.data_editor(
+            state["editor_base"], key=editor_key, hide_index=True, num_rows="fixed", use_container_width=True,
+            column_order=["Ref Number", "High-res video name", "Speakers"],
+            disabled=["_row_id", "Ref Number", "High-res video name"],
+            column_config={"_row_id": None, "Speakers": st.column_config.TextColumn("Speakers", width="medium"),
+                           "High-res video name": st.column_config.TextColumn(width="large")},
+        )
+    else:
+        edited = []
+        st.info("No rows need review.")
     review.edit({row["_row_id"]: row["Speakers"] if row["Speakers"] is not None else "" for row in edited})
+    # Apply the latest edits by source row ID before changing the visible set.
+    visible_ids = [row["_row_id"] for row in _visible_review_rows(review, need_review)]
+    refresh_filter = (need_review != state.get("need_review_filter", False)
+                      or visible_ids != [row["_row_id"] for row in state["editor_base"]])
     # Consume the latest editor changes before rerunning extraction or resetting.
     if find:
         folder_path = folder.strip().strip('"')
@@ -165,3 +183,10 @@ def render_speaker_workspace():
     st.download_button("Download completed CSV", data=download if download is not None else b"",
                        file_name=f"{Path(state['filename']).stem}_speakers_filled.csv", mime="text/csv",
                        disabled=download is None, key="download_speakers")
+
+    # Keep button actions above this refresh so a simultaneous cell edit cannot
+    # swallow Find/Apply/Reset. Only the view changes; export uses the full table.
+    if refresh_filter:
+        state["need_review_filter"] = need_review
+        state["generation"] += 1
+        st.rerun()
