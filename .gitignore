@@ -16,6 +16,8 @@ htmlcov/
 dist/
 build/
 validation/
+tests/
+scripts/
 .bootstrap/
 *.log
 
@@ -30,3 +32,5 @@ validation/
 ._*
 Thumbs.db
 Desktop.ini
+
+Plan.md
