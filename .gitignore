@@ -1,8 +1,32 @@
+# Local Python environments and bytecode
 .venv/
+.venv-old/
 __pycache__/
+*.py[cod]
+
+# Development caches and coverage output; keep tests/ in version control
 .pytest_cache/
-*.pyc
-.DS_Store
-validation/live-search.json
-validation/linkedin-search.json
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Generated packages, diagnostic reports, and logs
 dist/
+build/
+validation/
+.bootstrap/
+*.log
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
