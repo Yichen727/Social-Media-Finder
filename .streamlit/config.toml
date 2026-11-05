@@ -1,7 +1,6 @@
 [server]
-address = "127.0.0.1"
-headless = false
-runOnSave = false
+headless = true
+port = 8501
 
 [browser]
 gatherUsageStats = false
